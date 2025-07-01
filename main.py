@@ -19,6 +19,7 @@ class Query:
         elif self.marker not in ['is', 'are', 'do']:
             self.assertion = True
             self._arguments.append(self.marker)
+            # Asserted predicates (declared facts) must start with 'fact_'
             self._predicate += 'fact_'
 
         # Process the query
@@ -33,7 +34,8 @@ class Query:
             # Everything else in the string is merged into the predicate
             # This makes it easier to catch errors in query phrasing
             else:
-                self._predicate += word.strip('.,?').lower()
+                self._predicate += re.sub(
+                    r'(ren|s)$', '', word.strip('.,?').lower())
     
     def get_prolog_query(self):
         prolog_query = '{predicate}({arguments})'.format(
@@ -44,11 +46,11 @@ class Query:
         return prolog_query
 
 while True:
-    query_string = input("> ")
+    query_string = input("Prompt: ")
     query_obj = Query(query_string)
     
     prolog_query = query_obj.get_prolog_query()
-    print(prolog_query)
+    #print(prolog_query)
 
     if query_obj.assertion:
         Prolog.assertz(prolog_query)
