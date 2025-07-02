@@ -118,8 +118,13 @@ while True:
                 # Wrap query in a call to safe_assertz()
                 'safe_assertz({query}).'.format(query = prolog_query)))
             print(GREEN + 'OK! I learned something.' + END)
-        except:
-            print(RED + "Sorry, can you rephrase your prompt?" + END)
+        except Exception as e:
+            if "contradiction" in str(e):
+                # Contradiction error
+                print(RED + "That's impossible!" + END)
+            else:
+                # Unknown predicate error
+                print(RED + "Sorry, can you rephrase your prompt?" + END)
 
     # Handle Boolean queries
     elif not query_obj.marker == 'who':
