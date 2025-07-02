@@ -1,7 +1,12 @@
-from pyswip import Prolog
+from pyswip import Prolog, Functor, call
 import re
 
 Prolog.consult('knowledge_base.pl')
+
+CYAN = "\033[0;36m"
+GREEN = "\033[0;32m"
+RED = "\033[0;31m"
+END = "\033[0m"
 
 class Query:
     def __init__(self, query_string):
@@ -91,18 +96,36 @@ class Query:
         return prolog_query
 
 while True:
-    query_string = input("Prompt: ")
-    query_obj = Query(query_string)
-    
-    prolog_query = query_obj.get_prolog_query()
-    print(prolog_query)
+    query_string = input("> ")
+    query_obj = None
 
+    # Handle errors when parsing the input prompt
+    try:
+        query_obj = Query(query_string)
+    except:
+        print("Sorry, can you rephrase your prompt?\n")
+        continue
+
+    prolog_query = query_obj.get_prolog_query()
+    print("\n" + CYAN + prolog_query + END)
+
+    # Handle assertions
     if query_obj.assertion:
-        Prolog.assertz(prolog_query)
-        print("OK! I learned something.")
+        try:
+            # Prolog.query() returns a generator that we iterate with next()
+            # This will raise a StopIteration exception if safe_assertz() fails
+            next(Prolog.query(
+                # Wrap query in a call to safe_assertz()
+                'safe_assertz({query}).'.format(query = prolog_query)))
+            print(GREEN + 'OK! I learned something.' + END)
+        except:
+            print(RED + "Sorry, can you rephrase your prompt?" + END)
+
+    # Handle Boolean queries
     elif not query_obj.marker == 'who':
-        # Boolean queries
-        if len(list(Prolog.query(prolog_query))) > 0:
-            print("Yes!")
+        if list(Prolog.query(prolog_query)):
+            print(GREEN + "Yes!" + END)
         else:
-            print("No.")        
+            print(RED + "No." + END)
+    
+    print() # Newline
