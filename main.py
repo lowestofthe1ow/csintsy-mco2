@@ -5,42 +5,87 @@ Prolog.consult('knowledge_base.pl')
 
 class Query:
     def __init__(self, query_string):
-        self._arguments = []
-        self._predicate = ''
-        self.marker = ''
-        self.assertion = False
+        """Creates a new Query instance given a natural-language prompt.""" 
 
-        words = query_string.split()
-        self.marker = words.pop(0).strip(',?').lower()
+        # Private attributes ===================================================
+        self._args_left = []   # Arguments before the predicate
+        self._args_right = []  # Arguments after the predicate
+        self._predicate = ''   # Predicate name
+        #=======================================================================
 
+        # Public attributes ====================================================
+        self.marker = ''       # Question marker ('are', 'is', 'who')
+        self.assertion = False # Whether the query is an assertion of a fact
+        #=======================================================================
+
+        # Split the prompt into words, stripping them of certain characters
+        words = [word.strip('.,?') for word in query_string.split()]
+
+        # The first word is the question marker
+        self.marker = words.pop(0).lower()
+
+        # Questions that start with 'who' are open-ended
         if self.marker == 'who':
-            self._arguments.append('X')
-        # If the query did not start with these, then treat it as an assertion.
-        elif self.marker not in ['is', 'are', 'do']:
+            # 'X' is a placeholder for use in Prolog
+            self._args_left.append('X')
+
+        # If the query starts with 'is' or 'are', then it is closed-ended.
+        # Otherwise, it is an assertion of a fact.
+        elif self.marker not in ['is', 'are']:
             self.assertion = True
-            self._arguments.append(self.marker)
-            # Asserted predicates (declared facts) must start with 'fact_'
+            self._args_left.append(self.marker)
             self._predicate += 'fact_'
 
-        # Process the query
+        # Tracks whether we've encountered the predicate
+        found_predicate = False 
+
+        # Process the query word for word
         for word in words:
             # Ignore these words
             if word in ['a', 'an', 'of', 'the', 'and', 'is', 'are']:
                 continue
+
             # Process words that start in uppercase as names
             elif word[0].isupper():
-                self._arguments.append(
-                    word.strip('.,?').lower().replace("'s", ''))
+                if "'s" in word:
+                    raise ValueError("Invalid input provided.")
+                elif not found_predicate:
+                    self._args_left.append(word.lower())
+                else:
+                    self._args_right.append(word.lower())
+
             # Everything else in the string is merged into the predicate
             # This makes it easier to catch errors in query phrasing
             else:
+                # Singularize the preedicate verb
                 self._predicate += re.sub(
                     r'(ren|s)$', '', word.strip('.,?').lower())
-    
+                found_predicate = True
+
+    def _unwrap_args(self, args):
+        """Unwraps a list of arguments into a single string."""
+
+        count = len(args)
+        if count == 0:
+            # Return empty string if arguments are empty
+            return ''
+        elif count == 1:
+            # Return the string itself if arguments list is a singleton
+            return args[0]
+        else:
+            # Follow Prolog list syntax if multiple arguments
+            return '[' + ', '.join(args) + ']'
+
     def get_prolog_query(self):
-        prolog_query = '{predicate}({arguments})'.format(
-            predicate = self._predicate, 
-            arguments = ', '.join(self._arguments)
+        """Returns the Prolog query representation of this object."""
+
+        prolog_query = '{predicate}({args})'.format(
+            predicate = self._predicate,
+            # Join the left and right args, ignoring empty strings
+            args = ', '.join(filter(None, [
+                self._unwrap_args(self._args_left),
+                self._unwrap_args(self._args_right)
+            ]))
         )
 
         return prolog_query
@@ -50,7 +95,7 @@ while True:
     query_obj = Query(query_string)
     
     prolog_query = query_obj.get_prolog_query()
-    #print(prolog_query)
+    print(prolog_query)
 
     if query_obj.assertion:
         Prolog.assertz(prolog_query)
@@ -60,6 +105,4 @@ while True:
         if len(list(Prolog.query(prolog_query))) > 0:
             print("Yes!")
         else:
-            print("No.")
-
-        
+            print("No.")        
