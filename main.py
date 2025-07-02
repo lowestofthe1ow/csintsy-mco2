@@ -126,8 +126,19 @@ while True:
                 # Unknown predicate error
                 print(RED + "Sorry, can you rephrase your prompt?" + END)
 
+    # Handle open-ended questions
+    elif query_obj.marker == 'who':
+        result = ', '.join(
+            set([entry.get('X').capitalize() 
+                 for entry in list(Prolog.query(prolog_query))])
+        )
+        if result:
+            print(GREEN + result + END)
+        else:
+            print(RED + "Couldn't find anyone." + END)
+
     # Handle Boolean queries
-    elif not query_obj.marker == 'who':
+    else:
         if list(Prolog.query(prolog_query)):
             print(GREEN + "Yes!" + END)
         else:

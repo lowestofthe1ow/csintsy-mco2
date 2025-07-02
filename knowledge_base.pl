@@ -99,6 +99,10 @@ male(X) :- fact_father(X, _).
 
 parent(X, Y) :- fact_parent(X, Y).
 
+parent(X, Y) :- fact_mother(X, Y).
+
+parent(X, Y) :- fact_father(X, Y).
+
 parent(X, Y) :- fact_child(Y, X).
 
 % Sibling ----------------------------------------------------------------------
