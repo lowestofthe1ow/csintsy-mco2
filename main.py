@@ -15,7 +15,7 @@ class Query:
         # Private attributes ===================================================
         self._args_left = []   # Arguments before the predicate
         self._args_right = []  # Arguments after the predicate
-        self._predicate = ''   # Predicate name
+        self._predicate = []   # Predicate name
         #=======================================================================
 
         # Public attributes ====================================================
@@ -39,7 +39,7 @@ class Query:
         elif self.marker not in ['is', 'are']:
             self.assertion = True
             self._args_left.append(self.marker)
-            self._predicate += 'fact_'
+            self._predicate.append('fact') # Add "fact_" tag to assertions
 
         # Tracks whether we've encountered the predicate
         found_predicate = False 
@@ -62,10 +62,14 @@ class Query:
             # Everything else in the string is merged into the predicate
             # This makes it easier to catch errors in query phrasing
             else:
-                # Singularize the preedicate verb
-                self._predicate += re.sub(
-                    r'(ren|s)$', '', word.strip('.,?').lower())
+                # Singularize the predicate verb
+                self._predicate.append(re.sub(
+                    r'(ren|s)$', '', word.strip('.,?').lower()))
                 found_predicate = True
+        
+        # Throw an error if predicate is still empty
+        if not self._predicate:
+            raise ValueError("Invalid input provided.")
 
     def _unwrap_args(self, args):
         """Unwraps a list of arguments into a single string."""
@@ -85,7 +89,7 @@ class Query:
         """Returns the Prolog query representation of this object."""
 
         prolog_query = '{predicate}({args})'.format(
-            predicate = self._predicate,
+            predicate = '_'.join(self._predicate),
             # Join the left and right args, ignoring empty strings
             args = ', '.join(filter(None, [
                 self._unwrap_args(self._args_left),
@@ -103,7 +107,7 @@ while True:
     try:
         query_obj = Query(query_string)
     except:
-        print("Sorry, can you rephrase your prompt?\n")
+        print(RED + "Sorry, can you rephrase your prompt?\n" + END)
         continue
 
     prolog_query = query_obj.get_prolog_query()
@@ -128,20 +132,28 @@ while True:
 
     # Handle open-ended questions
     elif query_obj.marker == 'who':
-        result = ', '.join(
-            set([entry.get('X').capitalize() 
-                 for entry in list(Prolog.query(prolog_query))])
-        )
-        if result:
-            print(GREEN + result + END)
-        else:
-            print(RED + "Couldn't find anyone." + END)
+        try:
+            result = ', '.join(
+                set([entry.get('X').capitalize() 
+                    for entry in list(Prolog.query(prolog_query))])
+            )
+            if result:
+                print(GREEN + result + END)
+            else:
+                print(RED + "Couldn't find anyone." + END)
+        except:
+            print(RED + "Sorry, can you rephrase your prompt?" + END)
 
     # Handle Boolean queries
     else:
-        if list(Prolog.query(prolog_query)):
-            print(GREEN + "Yes!" + END)
-        else:
-            print(RED + "No." + END)
+        try:
+            if list(Prolog.query(
+                    # Wrap query in a call to safe_assertz()
+                    'once({query}).'.format(query = prolog_query))):
+                print(GREEN + "Yes!" + END)
+            else:
+                print(RED + "No." + END)
+        except:
+            print(RED + "Sorry, can you rephrase your prompt?" + END)
     
     print() # Newline
