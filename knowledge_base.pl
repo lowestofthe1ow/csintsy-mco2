@@ -1,3 +1,15 @@
+test :-
+    assertz(fact_sibling(riku, amane)),
+    assertz(fact_child(riku, misaki)),
+    assertz(fact_female(misaki)),
+    assertz(fact_child(amane, asuka)),
+    assertz(fact_female(asuka)),
+    assertz(fact_sibling(noa, amane)),
+    assertz(fact_child(noa, mashiro)),
+    sibling(riku, noa),
+    assertz(fact_female(mashiro)),
+    sibling(riku, noa).
+
 % Define these predicates as dynamic
 % current_predicate/1 will be true for these predicates.
 
@@ -45,6 +57,8 @@ safe_assertz(Term) :-
 
 % Note: At the application level, we only assert "fact_" predicates
 
+% TODO: Nicole
+
 contradiction(fact_female(X)) :- male(X).
 
 contradiction(fact_male(X)) :- female(X).
@@ -67,21 +81,13 @@ contradiction(fact_father(X, _)) :- female(X).
 
 contradiction(fact_child(X, X)) :- true.
 
-contradiction(fact_child(X, Y)) :- parent(X, Y).
-
-contradiction(fact_child(X, Y)) :-
-    X \= Y,
-    parent(X, Z),
-    parent(Z, Y).
+contradiction(fact_child(X, Y)) :- 
+    \+ is_list(X), 
+    parent(X, Y).
 
 % RULES ========================================================================
 
 % Notation: parent(X, Y) should mean "X is a parent of Y"
-
-% Always try to write rules in this order:
-%   1. Rules from directly asserted facts
-%   2. The "main" non-recursive rule
-%   3. Recursive rules, if any
 
 female(X) :- fact_female(X).
 
@@ -105,10 +111,50 @@ parent(X, Y) :- fact_father(X, Y).
 
 parent(X, Y) :- fact_child(Y, X).
 
+parent(X, Y) :-
+    fact_child(L, X),
+    is_list(L),
+    member(Y, L).
+
+parent(X, [Head | Tail]) :-
+    parent(X, Head),
+    parent(X, Tail).
+
+% Sibling (recursion helper) ---------------------------------------------------
+
+pairwise_sibling_HELPER(_, []).
+
+pairwise_sibling_HELPER(X, [Head | Tail]) :-
+    sibling(X, Head),
+    pairwise_sibling_HELPER(X, Tail).
+
 % Sibling ----------------------------------------------------------------------
 
-% Define sibling/1 as a "synonym" for sibling/2 
+sibling(X) :-
+    \+ is_list(X),
+    throw(error(Term, safe_assertz/1)).
+
 sibling([X, Y]) :- sibling(X, Y).
+
+sibling([Head | Tail]) :-
+    write(Head),
+    pairwise_sibling_HELPER(Head, Tail),
+    sibling(Tail).
+
+sibling(X, X) :- false.
+
+sibling(X, Y) :-
+    is_list(X),
+    is_list(Y),
+    append(X, Y, L),
+    sibling(L).
+
+sibling(X, Y) :- 
+    fact_sibling(L),
+    is_list(L),
+    member(X, L),
+    member(Y, L),
+    X \== Y.
 
 % sibling/2 is commutative 
 sibling(X, Y) :-
@@ -129,16 +175,13 @@ sibling(X, Y) :-
     fact_brother(Y, X).
 
 % Main definition
+% Already commutative by definition
 sibling(X, Y) :-
-    X \= Y,
+    \+ is_list(X),
+    \+ is_list(Y),
     parent(Z, X),
-    parent(Z, Y).
-
-% Transitivity
-sibling(X, Y) :-
-    X \= Y,
-    sibling(X, Z),
-    sibling(Z, Y).
+    parent(Z, Y),
+    X \== Y.
 
 % Sister -----------------------------------------------------------------------
 
@@ -177,4 +220,19 @@ father(X, Y) :-
 
 child(X, Y) :- fact_child(X, Y).
 
-child(X, Y) :- fact_parent(Y, X).
+child(X, Y) :-
+    fact_child(L, Y),
+    is_list(L),
+    member(X, L).
+
+child(X, Y) :- parent(Y, X).
+
+/* TODO: Red
+   - grandfather
+   - grandmother
+   - daughter
+   - son
+   - aunt
+   - uncle
+   - related
+ */
