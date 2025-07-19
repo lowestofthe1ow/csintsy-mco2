@@ -10,6 +10,10 @@ test :-
     assertz(fact_female(mashiro)),
     sibling(riku, noa).
 
+test2 :-
+    assertz(fact_aunt(x, z)),
+    related(x, z).
+
 % Define these predicates as dynamic
 % current_predicate/1 will be true for these predicates.
 
@@ -17,6 +21,10 @@ test :-
 :- dynamic fact_female   /1.
 
 :- dynamic fact_parent   /2.
+:- dynamic fact_grandparent /2.
+
+:- dynamic fact_grandfather /2.
+:- dynamic fact_grandmother /2.
 
 :- dynamic fact_mother   /2.
 :- dynamic fact_father   /2.
@@ -24,10 +32,16 @@ test :-
 :- dynamic fact_sibling  /1.
 :- dynamic fact_sibling  /2.
 
+:- dynamic fact_aunt    /2.
+:- dynamic fact_uncle   /2.
+
 :- dynamic fact_sister   /2.
 :- dynamic fact_brother  /2.
 
 :- dynamic fact_child    /2.
+
+:- dynamic fact_daughter /2.
+:- dynamic fact_son     /2.
 
 % Define a wrapper procedure around assertz()
 % TODO: Combine into a single procedure instead of splitting into 3
@@ -236,3 +250,87 @@ child(X, Y) :- parent(Y, X).
    - uncle
    - related
  */
+
+ % Grandparent
+ grandparent(X, Y) :-
+    fact_grandparent(X, Y).
+
+grandparent(X, Y) :-
+    parent(X, Z),
+    parent(Z, Y).
+    
+
+% Grandfather 
+
+grandfather(X, Y) :-
+    fact_grandfather(X, Y).
+
+grandfather(X, Y) :-
+    grandparent(X, Y),
+    male(X).
+
+% Grandmother
+
+grandmother(X, Y) :-
+    fact_grandmother(X, Y).
+
+grandmother(X, Y) :-
+    grandparent(X, Y),
+    female(X).
+    
+% Daughter
+
+daughter(X, Y) :-
+    fact_daughter(X, Y).
+
+daughter(X, Y) :-
+    parent(Y, X),
+    female.
+
+% Son
+son(X, Y) :-
+    fact_son(X, Y).
+
+son(X, Y) :-
+    parent(Y, X),
+    male.
+
+% Aunt   
+
+aunt(X, Y) :-
+    fact_aunt(X, Y).
+
+aunt(X, Y) :-
+    sibling(X, Z),
+    parent(Z, Y),
+    female(X).
+
+% Uncle
+
+uncle(X, Y) :-
+    fact_uncle(X, Y).
+
+uncle(X, Y) :-
+    sibling(X, Z),
+    parent(Z, Y),
+    male(X).
+
+
+related(X,Y) :-
+    parent(X,Y),  !.
+related(X,Y) :-
+    parent(Y,X),  !.
+related(X,Y) :-
+    sibling(X,Y), !.
+related(X,Y) :-
+    grandparent(X,Y), !.
+related(X,Y) :-
+    grandparent(Y,X), !.
+related(X,Y) :-
+    aunt(X,Y), !.
+related(X,Y) :-
+    aunt(Y,X), !.
+related(X,Y) :-
+    uncle(X,Y), !.
+related(X,Y) :-
+    uncle(Y,X), !.
