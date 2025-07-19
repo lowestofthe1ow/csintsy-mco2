@@ -130,17 +130,9 @@ parent(X, Y) :-
     is_list(L),
     member(Y, L).
 
-parent(X, [Head | Tail]) :-
-    parent(X, Head),
-    parent(X, Tail).
-
-% Sibling (recursion helper) ---------------------------------------------------
-
-pairwise_sibling_HELPER(_, []).
-
-pairwise_sibling_HELPER(X, [Head | Tail]) :-
-    sibling(X, Head),
-    pairwise_sibling_HELPER(X, Tail).
+parent(X, L) :-
+    is_list(L),
+    forall(member(Z, L), parent(X, Z)).
 
 % Sibling ----------------------------------------------------------------------
 
@@ -150,10 +142,9 @@ sibling(X) :-
 
 sibling([X, Y]) :- sibling(X, Y).
 
-sibling([Head | Tail]) :-
-    write(Head),
-    pairwise_sibling_HELPER(Head, Tail),
-    sibling(Tail).
+sibling(L) :-
+    is_list(L),
+    forall(member(X, L), forall((member(Y, L), X \== Y), sibling(X, Y))).
 
 sibling(X, X) :- false.
 
@@ -285,7 +276,7 @@ daughter(X, Y) :-
 
 daughter(X, Y) :-
     parent(Y, X),
-    female.
+    female(X).
 
 % Son
 son(X, Y) :-
@@ -293,7 +284,7 @@ son(X, Y) :-
 
 son(X, Y) :-
     parent(Y, X),
-    male.
+    male(X).
 
 % Aunt   
 
