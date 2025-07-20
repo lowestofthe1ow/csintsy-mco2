@@ -242,7 +242,7 @@ child(X, Y) :- parent(Y, X).
    - related
  */
 
- % Grandparent
+ % Grandparent -----------------------------------------------------------------
  grandparent(X, Y) :-
     fact_grandparent(X, Y).
 
@@ -251,7 +251,7 @@ grandparent(X, Y) :-
     parent(Z, Y).
     
 
-% Grandfather 
+% Grandfather ------------------------------------------------------------------
 
 grandfather(X, Y) :-
     fact_grandfather(X, Y).
@@ -260,7 +260,7 @@ grandfather(X, Y) :-
     grandparent(X, Y),
     male(X).
 
-% Grandmother
+% Grandmother ------------------------------------------------------------------
 
 grandmother(X, Y) :-
     fact_grandmother(X, Y).
@@ -269,7 +269,7 @@ grandmother(X, Y) :-
     grandparent(X, Y),
     female(X).
     
-% Daughter
+% Daughter ---------------------------------------------------------------------
 
 daughter(X, Y) :-
     fact_daughter(X, Y).
@@ -278,7 +278,7 @@ daughter(X, Y) :-
     parent(Y, X),
     female(X).
 
-% Son
+% Son --------------------------------------------------------------------------
 son(X, Y) :-
     fact_son(X, Y).
 
@@ -286,7 +286,7 @@ son(X, Y) :-
     parent(Y, X),
     male(X).
 
-% Aunt   
+% Aunt -------------------------------------------------------------------------   
 
 aunt(X, Y) :-
     fact_aunt(X, Y).
@@ -296,7 +296,7 @@ aunt(X, Y) :-
     parent(Z, Y),
     female(X).
 
-% Uncle
+% Uncle ------------------------------------------------------------------------
 
 uncle(X, Y) :-
     fact_uncle(X, Y).
@@ -306,7 +306,7 @@ uncle(X, Y) :-
     parent(Z, Y),
     male(X).
 
-
+% Related ----------------------------------------------------------------------
 related(X,Y) :-
     parent(X,Y),  !.
 related(X,Y) :-
