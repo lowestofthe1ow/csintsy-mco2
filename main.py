@@ -131,14 +131,26 @@ while True:
                 print(f"{RED}That's impossible!{END}")
             else:
                 # Unknown predicate error
-                print(f'{RED}Sorry, can you rephrase your prompt?\n{END}')
+                print(f'{RED}Sorry, can you rephrase your prompt?{END}')
 
     # Handle open-ended questions
     elif query_obj.marker.lower() == 'who':
         try:
             result = ', '.join(
-                set([entry.get('X').capitalize() 
-                    for entry in list(Prolog.query(prolog_query))])
+                # Create a set to remove duplicates
+                set([item
+                    # Iterate over entries in the result list
+                    for entry in list(Prolog.query(prolog_query))
+                    for item in (
+                        # If entry is a sublist, iterate over that list
+                        [nested_entry.capitalize() 
+                            for nested_entry in entry.get('X')]
+                            if isinstance(entry.get('X'), list)
+                        # If entry is not a sublist, get the value directly
+                        # We wrap it in an array for the outer for-in
+                        else [entry.get('X').capitalize()] 
+                    )
+                ])
             )
             if result:
                 print(f'{GREEN}{result}{END}')
@@ -146,7 +158,7 @@ while True:
                 print(f"{RED}Couldn't find anyone.{END}")
         except Exception as e:
             print(f'{GRAY}{e}{END}')
-            print(f'{RED}Sorry, can you rephrase your prompt?\n{END}')
+            print(f'{RED}Sorry, can you rephrase your prompt?{END}')
 
     # Handle Boolean queries
     else:
@@ -160,6 +172,6 @@ while True:
                 print(f'{RED}No{END}')
         except Exception as e:
             print(f'{GRAY}{e}{END}')
-            print(f'{RED}Sorry, can you rephrase your prompt?\n{END}')
+            print(f'{RED}Sorry, can you rephrase your prompt?{END}')
     
     print() # Newline

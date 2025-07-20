@@ -35,7 +35,10 @@ test2 :-
 :- dynamic fact_aunt    /2.
 :- dynamic fact_uncle   /2.
 
+:- dynamic fact_sister   /1.
 :- dynamic fact_sister   /2.
+
+:- dynamic fact_brother  /1.
 :- dynamic fact_brother  /2.
 
 :- dynamic fact_child    /2.
@@ -156,6 +159,20 @@ sibling(X, Y) :-
 
 sibling(X, Y) :- 
     fact_sibling(L),
+    is_list(L),
+    member(X, L),
+    member(Y, L),
+    X \== Y.
+
+sibling(X, Y) :- 
+    fact_brother(L),
+    is_list(L),
+    member(X, L),
+    member(Y, L),
+    X \== Y.
+
+sibling(X, Y) :- 
+    fact_sister(L),
     is_list(L),
     member(X, L),
     member(Y, L),
