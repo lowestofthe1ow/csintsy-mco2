@@ -108,17 +108,36 @@ contradiction(fact_child(X, Y)) :-
 
 female(X) :- fact_female(X).
 
+female(X) :- fact_daughter(X, _).
+
 female(X) :- fact_sister(X, _).
 
 female(X) :- fact_mother(X, _).
 
+female(X) :- fact_aunt(X, _).
+
+female(X) :- fact_grandmother(X, _).
+
 male(X) :- fact_male(X).
+
+male(X) :- fact_son(X, _).
+
+male(X) :- 
+    fact_son(L, _),
+    is_list(L),
+    member(X, L).
 
 male(X) :- fact_brother(X, _).
 
 male(X) :- fact_father(X, _).
 
+male(X) :- fact_uncle(X, _).
+
+male(X) :- fact_grandfather(X, _).
+
 % Parent -----------------------------------------------------------------------
+
+parent(X, X) :- !, false.
 
 parent(X, Y) :- fact_parent(X, Y).
 
@@ -128,14 +147,73 @@ parent(X, Y) :- fact_father(X, Y).
 
 parent(X, Y) :- fact_child(Y, X).
 
+parent(X, Y) :- fact_son(Y, X).
+
+parent(X, Y) :- fact_daughter(Y, X).
+
+parent(X, Y) :-
+    fact_parent(X, L),
+    is_list(L),
+    member(Y, L).
+
+parent(X, Y) :-
+    fact_mother(X, L),
+    is_list(L),
+    member(Y, L).
+
+parent(X, Y) :-
+    fact_father(X, L),
+    is_list(L),
+    member(Y, L).
+
 parent(X, Y) :-
     fact_child(L, X),
+    is_list(L),
+    member(Y, L).
+
+parent(X, Y) :-
+    fact_son(L, X),
+    is_list(L),
+    member(Y, L).
+
+parent(X, Y) :-
+    fact_daughter(L, X),
     is_list(L),
     member(Y, L).
 
 parent(X, L) :-
     is_list(L),
     forall(member(Z, L), parent(X, Z)).
+
+% Mother -----------------------------------------------------------------------
+
+mother(X, Y) :- fact_mother(X, Y).
+
+mother(X, Y) :-
+    parent(X, Y),
+    female(X).
+
+% Father -----------------------------------------------------------------------
+
+father(X, Y) :- fact_father(X, Y).
+
+father(X, Y) :-
+    parent(X, Y),
+    male(X).
+
+% Child ------------------------------------------------------------------------
+
+child(X, Y) :- fact_child(X, Y).
+
+child(X, Y) :- parent(Y, X).
+
+% Son --------------------------------------------------------------------------
+
+son(X, Y) :- fact_son(X, Y).
+
+son(X, Y) :-
+    child(X, Y),
+    male(X).
 
 % Sibling ----------------------------------------------------------------------
 
@@ -221,33 +299,6 @@ brother(X, Y) :-
 brother(X, Y) :-
     sibling(X, Y),
     male(X).
-
-% Mother -----------------------------------------------------------------------
-
-mother(X, Y) :- fact_mother(X, Y).
-
-mother(X, Y) :-
-    parent(X, Y),
-    female(X).
-
-% Father -----------------------------------------------------------------------
-
-father(X, Y) :- fact_father(X, Y).
-
-father(X, Y) :-
-    parent(X, Y),
-    male(X).
-
-% Child ------------------------------------------------------------------------
-
-child(X, Y) :- fact_child(X, Y).
-
-child(X, Y) :-
-    fact_child(L, Y),
-    is_list(L),
-    member(X, L).
-
-child(X, Y) :- parent(Y, X).
 
 /* TODO: Red
    - grandfather
