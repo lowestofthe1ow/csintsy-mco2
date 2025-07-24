@@ -29,6 +29,13 @@ test :-
 
 :- dynamic fact_child    /2.
 
+:- dynamic grandfather   /2.
+:- dynamic grandmother   /2.
+
+:- dynamic aunt          /2.
+:- dynamic uncle         /2.
+
+
 % Define a wrapper procedure around assertz()
 % TODO: Combine into a single procedure instead of splitting into 3
 
@@ -59,31 +66,118 @@ safe_assertz(Term) :-
 
 % TODO: Nicole
 
+/* - male
+   - female
+   - mother
+   - father
+   - sister
+   - brother
+   - sibling
+   - parent
+   - child
+   - grandfather
+   - grandmother
+   - daughter
+   - son
+   - aunt
+   - uncle
+   - related
+ */
+
+% Gender contradictions
 contradiction(fact_female(X)) :- male(X).
+contradiction(fact_male(X))   :- female(X).
 
-contradiction(fact_male(X)) :- female(X).
 
-contradiction(fact_sister(X, X)) :- true.
+% Sibling contradictions
+contradiction(fact_sibling(X, X)) :- true.
+contradiction(fact_sibling(X, Y)) :-
+    \+ (X \= Y, fact_parent(P, X), fact_parent(P, Y)).   % check
 
 contradiction(fact_sister(X, _)) :- male(X).
-
-contradiction(fact_brother(X, X)) :- true.
+contradiction(fact_sister(X, X)) :- true.
+contradiction(fact_sister(X, Y)) :-
+    \+ (fact_female(X), X \= Y, fact_parent(P, X), fact_parent(P, Y)).
 
 contradiction(fact_brother(X, _)) :- female(X).
+contradiction(fact_brother(X, X)) :- true.
+contradiction(fact_brother(X, Y)) :-
+    \+ (fact_male(X), X \= Y, fact_parent(P, X), fact_parent(P, Y)).
 
-contradiction(fact_mother(X, X)) :- true.
+
+% Parent contradictions
+contradiction(fact_parent(X, X)) :- true.
+contradiction(fact_parent(X, Y)) :-
+    \+ fact_child(Y, X).
 
 contradiction(fact_mother(X, _)) :- male(X).
-
-contradiction(fact_father(X, X)) :- true.
+contradiction(fact_mother(X, X)) :- true.
+contradiction(fact_mother(X, Y)) :-
+    \+ (fact_female(X), fact_parent(X, Y)).
 
 contradiction(fact_father(X, _)) :- female(X).
+contradiction(fact_father(X, X)) :- true.
+contradiction(fact_father(X, Y)) :-
+    \+ (fact_male(X), fact_parent(X, Y)).
 
+
+% Child contradictions
 contradiction(fact_child(X, X)) :- true.
-
 contradiction(fact_child(X, Y)) :- 
     \+ is_list(X), 
     parent(X, Y).
+
+
+% Grandparent contradictions
+contradiction(fact_grandfather(X, _)) :- female(X).
+contradiction(fact_grandfather(X, X)) :- true.
+contradiction(fact_grandfather(X, Y)) :-
+    \+ (fact_male(X), fact_parent(X, Z), fact_parent(Z, Y)).
+
+contradiction(fact_grandmother(X, _)) :- male(X).
+contradiction(fact_grandmother(X, X)) :- true.
+contradiction(fact_grandmother(X, Y)) :-
+    \+ (fact_female(X), fact_parent(X, Z), fact_parent(Z, Y)).
+
+
+% Daughter/Son contradictions
+contradiction(fact_daughter(X, _)) :- male(X).
+contradiction(fact_daughter(X, X)) :- true.
+contradiction(fact_daughter(X, Y)) :-
+    \+ (fact_female(X), fact_child(X, Y), fact_parent(Y, X)).
+
+contradiction(fact_son(X, _)) :- female(X).
+contradiction(fact_son(X, X)) :- true.
+contradiction(fact_son(X, Y)) :-
+    \+ (fact_male(X), fact_child(X, Y), fact_parent(Y, X)).
+
+
+% Aunt/Uncle contradictions
+contradiction(fact_aunt(X, _)) :- male(X).
+contradiction(fact_aunt(X, X)) :- true.
+contradiction(fact_aunt(X, Y)) :-
+    \+ (fact_female(X), fact_parent(P, Y), fact_sibling(X, P)).
+
+
+contradiction(fact_uncle(X, _)) :- female(X).
+contradiction(fact_uncle(X, X)) :- true.
+contradiction(fact_uncle(X, Y)) :-
+    \+ (fact_male(X), fact_parent(P, Y), fact_sibling(X, P)).
+
+
+% General catch: no one can be related to themselves
+contradiction(fact_related(X, X)) :- true.
+
+
+% Prevent someone from being both parent and sibling of same person
+contradiction(fact_parent(X, Y)) :-
+    sibling(X, Y).
+
+
+% Prevent someone from being their own ancestor
+contradiction(fact_parent(X, Y)) :-
+    parent(Y, X).  % cycle: Y is also parent of X
+
 
 % RULES ========================================================================
 
