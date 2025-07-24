@@ -69,6 +69,13 @@ test7 :-
     assertz(fact_parent(f, g)),
     related(r, g). %yes
 
+test8 :-
+    safe_assertz(fact_parent(a, [x, y])),
+    safe_assertz(fact_child([b, c, d], x)),
+    parent(a, x),
+    parent(x, d),
+    grandparent(a, d).
+
 % Define these predicates as dynamic
 % current_predicate/1 will be true for these predicates.
 
@@ -90,10 +97,8 @@ test7 :-
 :- dynamic fact_aunt    /2.
 :- dynamic fact_uncle   /2.
 
-:- dynamic fact_sister   /1.
 :- dynamic fact_sister   /2.
 
-:- dynamic fact_brother  /1.
 :- dynamic fact_brother  /2.
 
 :- dynamic fact_child    /2.
@@ -192,8 +197,6 @@ male(X) :- fact_grandfather(X, _).
 
 % Parent -----------------------------------------------------------------------
 
-parent(X, X) :- !, false.
-
 parent(X, Y) :- fact_parent(X, Y).
 
 parent(X, Y) :- fact_mother(X, Y).
@@ -245,6 +248,11 @@ parent(X, L) :-
 mother(X, Y) :- fact_mother(X, Y).
 
 mother(X, Y) :-
+    fact_mother(X, L),
+    is_list(L),
+    member(Y, L).
+
+mother(X, Y) :-
     parent(X, Y),
     female(X).
 
@@ -253,18 +261,39 @@ mother(X, Y) :-
 father(X, Y) :- fact_father(X, Y).
 
 father(X, Y) :-
+    fact_father(X, L),
+    is_list(L),
+    member(Y, L).
+
+father(X, Y) :-
     parent(X, Y),
     male(X).
 
 % Child ------------------------------------------------------------------------
 
-child(X, Y) :- fact_child(X, Y).
-
 child(X, Y) :- parent(Y, X).
+
+% Daughter ---------------------------------------------------------------------
+
+daughter(X, Y) :- fact_daughter(X, Y).
+
+daughter(X, Y) :-
+    fact_daughter(L, X),
+    is_list(L),
+    member(Y, L).
+
+daughter(X, Y) :-
+    child(X, Y),
+    female(X).
 
 % Son --------------------------------------------------------------------------
 
 son(X, Y) :- fact_son(X, Y).
+
+son(X, Y) :-
+    fact_son(L, X),
+    is_list(L),
+    member(Y, L).
 
 son(X, Y) :-
     child(X, Y),
@@ -272,24 +301,33 @@ son(X, Y) :-
 
 % Sibling ----------------------------------------------------------------------
 
+% sibling/1 undefined for non-lists
 sibling(X) :-
     \+ is_list(X),
     throw(error(Term, safe_assertz/1)).
 
+% Simple case: sibling/1 can directly map to sibling/2
 sibling([X, Y]) :- sibling(X, Y).
 
+% sibling/1 for a list: for all X and Y in list, X and Y are siblings
 sibling(L) :-
     is_list(L),
     forall(member(X, L), forall((member(Y, L), X \== Y), sibling(X, Y))).
 
-sibling(X, X) :- false.
+% sibling/2 for a list and an atom: for all X in list, X and Y are siblings
+sibling(L, Y) :-
+    is_list(L),
+    \+ is_list(Y),
+    forall(member(X, L), sibling(X, Y)).
 
-sibling(X, Y) :-
-    is_list(X),
-    is_list(Y),
-    append(X, Y, L),
+% sibling/2 for two lists: combine into a single list
+sibling(L1, L2) :-
+    is_list(L1),
+    is_list(L2),
+    append(L1, L2, L),
     sibling(L).
 
+% sibling/2 for X and Y being part of the same list
 sibling(X, Y) :- 
     fact_sibling(L),
     is_list(L),
@@ -297,19 +335,7 @@ sibling(X, Y) :-
     member(Y, L),
     X \== Y.
 
-sibling(X, Y) :- 
-    fact_brother(L),
-    is_list(L),
-    member(X, L),
-    member(Y, L),
-    X \== Y.
-
-sibling(X, Y) :- 
-    fact_sister(L),
-    is_list(L),
-    member(X, L),
-    member(Y, L),
-    X \== Y.
+% sibling/2 for direct assertions with X and Y
 
 % sibling/2 is commutative 
 sibling(X, Y) :-
@@ -340,6 +366,8 @@ sibling(X, Y) :-
 
 % Sister -----------------------------------------------------------------------
 
+% TODO: Support for statements like "X and Y are sisters"
+
 sister(X, Y) :- fact_sister(X, Y).
 
 sister(X, Y) :-
@@ -347,6 +375,8 @@ sister(X, Y) :-
     female(X).
 
 % Brother ----------------------------------------------------------------------
+
+% TODO: Support for statements like "X and Y are brothers"
 
 brother(X, Y) :-
     fact_brother(X, Y).
@@ -365,14 +395,14 @@ brother(X, Y) :-
    - related
  */
 
- % Grandparent -----------------------------------------------------------------
- grandparent(X, Y) :-
+% Grandparent ------------------------------------------------------------------
+
+grandparent(X, Y) :-
     fact_grandparent(X, Y).
 
 grandparent(X, Y) :-
     parent(X, Z),
     parent(Z, Y).
-    
 
 % Grandfather ------------------------------------------------------------------
 
@@ -391,25 +421,8 @@ grandmother(X, Y) :-
 grandmother(X, Y) :-
     grandparent(X, Y),
     female(X).
-    
-% Daughter ---------------------------------------------------------------------
 
-daughter(X, Y) :-
-    fact_daughter(X, Y).
-
-daughter(X, Y) :-
-    parent(Y, X),
-    female(X).
-
-% Son --------------------------------------------------------------------------
-son(X, Y) :-
-    fact_son(X, Y).
-
-son(X, Y) :-
-    parent(Y, X),
-    male(X).
-
-% Aunt -------------------------------------------------------------------------   
+% Aunt -------------------------------------------------------------------------
 
 aunt(X, Y) :-
     fact_aunt(X, Y).
