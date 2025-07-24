@@ -1,0 +1,24 @@
+Are ___ and ___ siblings?
+Who are the siblings of ___?
+Is ___ a sister of ___?
+Who are the sisters of ___?
+Is ___ a brother of ___?
+Who are the brothers of ___?
+Is ___ the mother of ___?
+Who is the mother of ___?
+Is ___ the father of ___?
+Who is the father of ___?
+Are ___ and ___ the parents of ___?
+Who are the parents of ___?
+Is ___ a grandmother of ___?
+Is ___ a grandfather of ___?
+Is ___ a daughter of ___?
+Who are the daughters of ___?
+Is ___ a son of ___?
+Who are the sons of ___?
+Is ___ a child of ___?
+Who are the children of ___?
+Are ___, and ___ children of ___?
+Is ___ an aunt of ___?
+Is ___ an uncle of ___?
+Are ___ and ___ relatives?

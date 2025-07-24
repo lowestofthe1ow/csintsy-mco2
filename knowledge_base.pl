@@ -304,7 +304,7 @@ son(X, Y) :-
 % sibling/1 undefined for non-lists
 sibling(X) :-
     \+ is_list(X),
-    throw(error(Term, safe_assertz/1)).
+    throw(error(_, safe_assertz/1)).
 
 % Simple case: sibling/1 can directly map to sibling/2
 sibling([X, Y]) :- sibling(X, Y).
@@ -315,7 +315,13 @@ sibling(L) :-
     forall(member(X, L), forall((member(Y, L), X \== Y), sibling(X, Y))).
 
 % sibling/2 for a list and an atom: for all X in list, X and Y are siblings
+
 sibling(L, Y) :-
+    is_list(L),
+    \+ is_list(Y),
+    forall(member(X, L), sibling(X, Y)).
+
+sibling(Y, L) :-
     is_list(L),
     \+ is_list(Y),
     forall(member(X, L), sibling(X, Y)).

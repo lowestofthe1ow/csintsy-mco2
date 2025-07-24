@@ -1,0 +1,14 @@
+___ and ___ are siblings.
+___ is a brother of ___.
+___ is a sister of ___.
+___ is the father of ___.
+___ is the mother of ___.
+___ and ___ are the parents of ___.
+___ is a grandmother of ___.
+___ is a grandfather of ___.
+___ is a child of ___.
+___, ___, and ___ are children of ___.
+___ is a daughter of ___.
+___ is a son of ___.
+___ is an uncle of ___.
+___ is an aunt of ___.
