@@ -14,6 +14,61 @@ test2 :-
     assertz(fact_aunt(x, z)),
     related(x, z).
 
+test3 :- 
+    assertz(fact_sibling(s, t)),
+    assertz(fact_parent(s, a)),
+    assertz(fact_parent(s, y)),
+    assertz(fact_parent(x, z)),
+    assertz(fact_parent(y, z)),
+    assertz(fact_parent(a, c)),
+    assertz(fact_parent(b, c)),
+    related(z, t). % return yes
+
+test4 :-
+    assertz(fact_parent(gp,p)),
+    assertz(fact_sibling(a,gp)),
+    assertz(fact_parent(p,c)),
+    related(a, c). % return yes
+
+test5 :-
+    assertz(fact_father(m, s)),
+    assertz(fact_mother(m, y)),
+    assertz(fact_mother(s, a)),
+    assertz(fact_child(z, y)),
+    assertz(fact_child(z, x)),
+    assertz(fact_child(c, a)),
+    assertz(fact_child(c, b)),
+    related(m, b). % return no
+
+test6 :-
+    % assertz(fact_sibling(m, s)),
+    assertz(fact_father(p, m)),
+    assertz(fact_father(p, s)),
+    assertz(fact_father(f, h)),
+    assertz(fact_father(m, h)),
+    assertz(fact_mother(s, g)),
+    assertz(fact_father(t, g)),
+    assertz(fact_mother(h, l)),
+    assertz(fact_father(g, l)),
+    assertz(fact_mother(h, a)),
+    assertz(fact_father(g, x)),
+    assertz(fact_mother(o, x)),
+    assertz(fact_father(c, a)),
+    related(a, x). %return yes
+
+test7 :-
+    assertz(fact_father(p, a)),
+    assertz(fact_father(p, b)),
+    assertz(fact_mother(m, a)),
+    assertz(fact_mother(a, r)),
+    assertz(fact_mother(m, b)),
+    assertz(fact_parent(b, c)),
+    assertz(fact_parent(c, d)),
+    assertz(fact_parent(d, e)),
+    assertz(fact_parent(e, f)),
+    assertz(fact_parent(f, g)),
+    related(r, g). %yes
+
 % Define these predicates as dynamic
 % current_predicate/1 will be true for these predicates.
 
@@ -310,7 +365,7 @@ brother(X, Y) :-
    - related
  */
 
- % Grandparent
+ % Grandparent -----------------------------------------------------------------
  grandparent(X, Y) :-
     fact_grandparent(X, Y).
 
@@ -319,7 +374,7 @@ grandparent(X, Y) :-
     parent(Z, Y).
     
 
-% Grandfather 
+% Grandfather ------------------------------------------------------------------
 
 grandfather(X, Y) :-
     fact_grandfather(X, Y).
@@ -328,7 +383,7 @@ grandfather(X, Y) :-
     grandparent(X, Y),
     male(X).
 
-% Grandmother
+% Grandmother ------------------------------------------------------------------
 
 grandmother(X, Y) :-
     fact_grandmother(X, Y).
@@ -337,7 +392,7 @@ grandmother(X, Y) :-
     grandparent(X, Y),
     female(X).
     
-% Daughter
+% Daughter ---------------------------------------------------------------------
 
 daughter(X, Y) :-
     fact_daughter(X, Y).
@@ -346,7 +401,7 @@ daughter(X, Y) :-
     parent(Y, X),
     female(X).
 
-% Son
+% Son --------------------------------------------------------------------------
 son(X, Y) :-
     fact_son(X, Y).
 
@@ -354,7 +409,7 @@ son(X, Y) :-
     parent(Y, X),
     male(X).
 
-% Aunt   
+% Aunt -------------------------------------------------------------------------   
 
 aunt(X, Y) :-
     fact_aunt(X, Y).
@@ -364,7 +419,7 @@ aunt(X, Y) :-
     parent(Z, Y),
     female(X).
 
-% Uncle
+% Uncle ------------------------------------------------------------------------
 
 uncle(X, Y) :-
     fact_uncle(X, Y).
@@ -374,22 +429,31 @@ uncle(X, Y) :-
     parent(Z, Y),
     male(X).
 
+% Related ----------------------------------------------------------------------
 
-related(X,Y) :-
-    parent(X,Y),  !.
-related(X,Y) :-
-    parent(Y,X),  !.
-related(X,Y) :-
-    sibling(X,Y), !.
-related(X,Y) :-
-    grandparent(X,Y), !.
-related(X,Y) :-
-    grandparent(Y,X), !.
-related(X,Y) :-
-    aunt(X,Y), !.
-related(X,Y) :-
-    aunt(Y,X), !.
-related(X,Y) :-
-    uncle(X,Y), !.
-related(X,Y) :-
-    uncle(Y,X), !.
+related(X, Y) :-
+    parent(X, Y);
+    parent(Y, X).
+
+related(X, Y) :-
+    sibling(X, Y).
+
+% ancestor
+related(X, Y) :-
+    parent(P, Y),
+    related(X, P).
+
+% descendant
+related(X, Y) :-
+    parent(P, X),
+    related(P, Y).
+
+% X is a sibling of an ancestor of Y
+related(X, Y) :-
+    parent(P, Y),
+    sibling(X, P).
+
+% Y is a sibling of an ancestor of X
+related(X, Y) :-
+    parent(P, X),
+    sibling(Y, P).
