@@ -1,81 +1,3 @@
-test :-
-    assertz(fact_sibling(riku, amane)),
-    assertz(fact_child(riku, misaki)),
-    assertz(fact_female(misaki)),
-    assertz(fact_child(amane, asuka)),
-    assertz(fact_female(asuka)),
-    assertz(fact_sibling(noa, amane)),
-    assertz(fact_child(noa, mashiro)),
-    sibling(riku, noa),
-    assertz(fact_female(mashiro)),
-    sibling(riku, noa).
-
-test2 :-
-    assertz(fact_aunt(x, z)),
-    related(x, z).
-
-test3 :- 
-    assertz(fact_sibling(s, t)),
-    assertz(fact_parent(s, a)),
-    assertz(fact_parent(s, y)),
-    assertz(fact_parent(x, z)),
-    assertz(fact_parent(y, z)),
-    assertz(fact_parent(a, c)),
-    assertz(fact_parent(b, c)),
-    related(z, t). % return yes
-
-test4 :-
-    assertz(fact_parent(gp,p)),
-    assertz(fact_sibling(a,gp)),
-    assertz(fact_parent(p,c)),
-    related(a, c). % return yes
-
-test5 :-
-    assertz(fact_father(m, s)),
-    assertz(fact_mother(m, y)),
-    assertz(fact_mother(s, a)),
-    assertz(fact_child(z, y)),
-    assertz(fact_child(z, x)),
-    assertz(fact_child(c, a)),
-    assertz(fact_child(c, b)),
-    related(m, b). % return no
-
-test6 :-
-    % assertz(fact_sibling(m, s)),
-    assertz(fact_father(p, m)),
-    assertz(fact_father(p, s)),
-    assertz(fact_father(f, h)),
-    assertz(fact_father(m, h)),
-    assertz(fact_mother(s, g)),
-    assertz(fact_father(t, g)),
-    assertz(fact_mother(h, l)),
-    assertz(fact_father(g, l)),
-    assertz(fact_mother(h, a)),
-    assertz(fact_father(g, x)),
-    assertz(fact_mother(o, x)),
-    assertz(fact_father(c, a)),
-    related(a, x). %return yes
-
-test7 :-
-    assertz(fact_father(p, a)),
-    assertz(fact_father(p, b)),
-    assertz(fact_mother(m, a)),
-    assertz(fact_mother(a, r)),
-    assertz(fact_mother(m, b)),
-    assertz(fact_parent(b, c)),
-    assertz(fact_parent(c, d)),
-    assertz(fact_parent(d, e)),
-    assertz(fact_parent(e, f)),
-    assertz(fact_parent(f, g)),
-    related(r, g). %yes
-
-test8 :-
-    safe_assertz(fact_parent(a, [x, y])),
-    safe_assertz(fact_child([b, c, d], x)),
-    parent(a, x),
-    parent(x, d),
-    grandparent(a, d).
-
 % Define these predicates as dynamic
 % current_predicate/1 will be true for these predicates.
 
@@ -83,31 +5,26 @@ test8 :-
 :- dynamic fact_female   /1.
 
 :- dynamic fact_parent   /2.
-:- dynamic fact_grandparent /2.
-
-:- dynamic fact_grandfather /2.
-:- dynamic fact_grandmother /2.
-
 :- dynamic fact_mother   /2.
 :- dynamic fact_father   /2.
 
+:- dynamic fact_child    /2.
+:- dynamic fact_daughter /2.
+:- dynamic fact_son     /2.
+
 :- dynamic fact_sibling  /1.
 :- dynamic fact_sibling  /2.
+:- dynamic fact_sister   /2.
+:- dynamic fact_brother  /2.
+
+:- dynamic fact_grandparent /2.
+:- dynamic fact_grandfather /2.
+:- dynamic fact_grandmother /2.
 
 :- dynamic fact_aunt    /2.
 :- dynamic fact_uncle   /2.
 
-:- dynamic fact_sister   /2.
-
-:- dynamic fact_brother  /2.
-
-:- dynamic fact_child    /2.
-
-:- dynamic fact_daughter /2.
-:- dynamic fact_son     /2.
-
 % Define a wrapper procedure around assertz()
-% TODO: Combine into a single procedure instead of splitting into 3
 
 % Case when asserting with a defined predicate and no contradictions (valid)
 safe_assertz(Term) :-
@@ -134,120 +51,62 @@ safe_assertz(Term) :-
 
 % Note: At the application level, we only assert "fact_" predicates
 
-% TODO: Nicole
-
-/* - male
-   - female
-   - mother
-   - father
-   - sister
-   - brother
-   - sibling
-   - parent
-   - child
-   - grandfather
-   - grandmother
-   - daughter
-   - son
-   - aunt
-   - uncle
-   - related
- */
-
 % Gender contradictions
 contradiction(fact_female(X)) :- male(X).
-contradiction(fact_male(X))   :- female(X).
-
+contradiction(fact_male(X)) :- female(X).
 
 % Sibling contradictions
 contradiction(fact_sibling(X, X)) :- true.
-contradiction(fact_sibling(X, Y)) :-
-    \+ (X \= Y, fact_parent(P, X), fact_parent(P, Y)).   % check
 
 contradiction(fact_sister(X, _)) :- male(X).
 contradiction(fact_sister(X, X)) :- true.
-contradiction(fact_sister(X, Y)) :-
-    \+ (fact_female(X), X \= Y, fact_parent(P, X), fact_parent(P, Y)).
 
 contradiction(fact_brother(X, _)) :- female(X).
 contradiction(fact_brother(X, X)) :- true.
-contradiction(fact_brother(X, Y)) :-
-    \+ (fact_male(X), X \= Y, fact_parent(P, X), fact_parent(P, Y)).
-
 
 % Parent contradictions
 contradiction(fact_parent(X, X)) :- true.
-contradiction(fact_parent(X, Y)) :-
-    \+ fact_child(Y, X).
 
 contradiction(fact_mother(X, _)) :- male(X).
 contradiction(fact_mother(X, X)) :- true.
-contradiction(fact_mother(X, Y)) :-
-    \+ (fact_female(X), fact_parent(X, Y)).
 
 contradiction(fact_father(X, _)) :- female(X).
 contradiction(fact_father(X, X)) :- true.
-contradiction(fact_father(X, Y)) :-
-    \+ (fact_male(X), fact_parent(X, Y)).
-
 
 % Child contradictions
 contradiction(fact_child(X, X)) :- true.
-contradiction(fact_child(X, Y)) :- 
-    \+ is_list(X), 
-    parent(X, Y).
-
 
 % Grandparent contradictions
 contradiction(fact_grandfather(X, _)) :- female(X).
 contradiction(fact_grandfather(X, X)) :- true.
-contradiction(fact_grandfather(X, Y)) :-
-    \+ (fact_male(X), fact_parent(X, Z), fact_parent(Z, Y)).
 
 contradiction(fact_grandmother(X, _)) :- male(X).
 contradiction(fact_grandmother(X, X)) :- true.
-contradiction(fact_grandmother(X, Y)) :-
-    \+ (fact_female(X), fact_parent(X, Z), fact_parent(Z, Y)).
-
 
 % Daughter/Son contradictions
 contradiction(fact_daughter(X, _)) :- male(X).
 contradiction(fact_daughter(X, X)) :- true.
-contradiction(fact_daughter(X, Y)) :-
-    \+ (fact_female(X), fact_child(X, Y), fact_parent(Y, X)).
 
 contradiction(fact_son(X, _)) :- female(X).
 contradiction(fact_son(X, X)) :- true.
-contradiction(fact_son(X, Y)) :-
-    \+ (fact_male(X), fact_child(X, Y), fact_parent(Y, X)).
-
 
 % Aunt/Uncle contradictions
 contradiction(fact_aunt(X, _)) :- male(X).
 contradiction(fact_aunt(X, X)) :- true.
-contradiction(fact_aunt(X, Y)) :-
-    \+ (fact_female(X), fact_parent(P, Y), fact_sibling(X, P)).
-
 
 contradiction(fact_uncle(X, _)) :- female(X).
 contradiction(fact_uncle(X, X)) :- true.
-contradiction(fact_uncle(X, Y)) :-
-    \+ (fact_male(X), fact_parent(P, Y), fact_sibling(X, P)).
-
 
 % General catch: no one can be related to themselves
 contradiction(fact_related(X, X)) :- true.
-
 
 % Prevent someone from being both parent and sibling of same person
 contradiction(fact_parent(X, Y)) :-
     sibling(X, Y).
 
-
 % Prevent someone from being their own ancestor
 contradiction(fact_parent(X, Y)) :-
     parent(Y, X).  % cycle: Y is also parent of X
-
 
 % RULES ========================================================================
 
@@ -261,6 +120,8 @@ female(X) :- fact_sister(X, _).
 
 female(X) :- fact_mother(X, _).
 
+female(X) :- parent(X, Y), father(_, Y).
+
 female(X) :- fact_aunt(X, _).
 
 female(X) :- fact_grandmother(X, _).
@@ -269,14 +130,11 @@ male(X) :- fact_male(X).
 
 male(X) :- fact_son(X, _).
 
-male(X) :- 
-    fact_son(L, _),
-    is_list(L),
-    member(X, L).
-
 male(X) :- fact_brother(X, _).
 
 male(X) :- fact_father(X, _).
+
+male(X) :- parent(X, Y), mother(_, Y).
 
 male(X) :- fact_uncle(X, _).
 
@@ -334,10 +192,10 @@ parent(X, L) :-
 
 mother(X, Y) :- fact_mother(X, Y).
 
-mother(X, Y) :-
-    fact_mother(X, L),
-    is_list(L),
-    member(Y, L).
+mother(X, Y) :- 
+    parent(X, Y),
+    father(Z, Y),
+    X \= Z.
 
 mother(X, Y) :-
     parent(X, Y),
@@ -347,10 +205,10 @@ mother(X, Y) :-
 
 father(X, Y) :- fact_father(X, Y).
 
-father(X, Y) :-
-    fact_father(X, L),
-    is_list(L),
-    member(Y, L).
+father(X, Y) :- 
+    parent(X, Y),
+    mother(Z, Y),
+    X \= Z.
 
 father(X, Y) :-
     parent(X, Y),
@@ -365,22 +223,12 @@ child(X, Y) :- parent(Y, X).
 daughter(X, Y) :- fact_daughter(X, Y).
 
 daughter(X, Y) :-
-    fact_daughter(L, X),
-    is_list(L),
-    member(Y, L).
-
-daughter(X, Y) :-
     child(X, Y),
     female(X).
 
 % Son --------------------------------------------------------------------------
 
 son(X, Y) :- fact_son(X, Y).
-
-son(X, Y) :-
-    fact_son(L, X),
-    is_list(L),
-    member(Y, L).
 
 son(X, Y) :-
     child(X, Y),
@@ -402,7 +250,6 @@ sibling(L) :-
     forall(member(X, L), forall((member(Y, L), X \== Y), sibling(X, Y))).
 
 % sibling/2 for a list and an atom: for all X in list, X and Y are siblings
-
 sibling(L, Y) :-
     is_list(L),
     \+ is_list(Y),
@@ -477,16 +324,6 @@ brother(X, Y) :-
 brother(X, Y) :-
     sibling(X, Y),
     male(X).
-
-/* TODO: Red
-   - grandfather
-   - grandmother
-   - daughter
-   - son
-   - aunt
-   - uncle
-   - related
- */
 
 % Grandparent ------------------------------------------------------------------
 
