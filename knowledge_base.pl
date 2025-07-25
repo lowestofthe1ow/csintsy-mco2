@@ -194,8 +194,9 @@ mother(X, Y) :- fact_mother(X, Y).
 
 mother(X, Y) :- 
     parent(X, Y),
-    father(Z, Y),
-    X \= Z.
+    parent(Z, Y),
+    X \= Z,
+    male(Z).
 
 mother(X, Y) :-
     parent(X, Y),
@@ -207,8 +208,9 @@ father(X, Y) :- fact_father(X, Y).
 
 father(X, Y) :- 
     parent(X, Y),
-    mother(Z, Y),
-    X \= Z.
+    parent(Z, Y),
+    X \= Z,
+    female(Z).
 
 father(X, Y) :-
     parent(X, Y),
