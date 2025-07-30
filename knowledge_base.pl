@@ -112,33 +112,37 @@ contradiction(fact_parent(X, Y)) :-
 
 % Notation: parent(X, Y) should mean "X is a parent of Y"
 
-female(X) :- fact_female(X).
 
-female(X) :- fact_daughter(X, _).
+fact_female(X) :- fact_daughter(X, _).
 
-female(X) :- fact_sister(X, _).
+fact_female(X) :- fact_sister(X, _).
 
-female(X) :- fact_mother(X, _).
+fact_female(X) :- fact_mother(X, _).
 
-female(X) :- parent(X, Y), father(_, Y).
+fact_female(X) :- fact_aunt(X, _).
 
-female(X) :- fact_aunt(X, _).
+fact_female(X) :- fact_grandmother(X, _).
 
-female(X) :- fact_grandmother(X, _).
+fact_male(X) :- fact_son(X, _).
+
+fact_male(X) :- fact_brother(X, _).
+
+fact_male(X) :- fact_father(X, _).
+
+fact_male(X) :- fact_uncle(X, _).
+
+fact_male(X) :- fact_grandfather(X, _).
+
 
 male(X) :- fact_male(X).
 
-male(X) :- fact_son(X, _).
+male(X) :- father(X, _).
 
-male(X) :- fact_brother(X, _).
+female(X) :- fact_female(X).
 
-male(X) :- fact_father(X, _).
+female(X) :- mother(X, _).
 
-male(X) :- parent(X, Y), mother(_, Y).
 
-male(X) :- fact_uncle(X, _).
-
-male(X) :- fact_grandfather(X, _).
 
 % Parent -----------------------------------------------------------------------
 
@@ -196,11 +200,11 @@ mother(X, Y) :-
     parent(X, Y),
     parent(Z, Y),
     X \= Z,
-    male(Z).
+    fact_male(Z).
 
 mother(X, Y) :-
     parent(X, Y),
-    female(X).
+    fact_female(X).
 
 % Father -----------------------------------------------------------------------
 
@@ -210,11 +214,11 @@ father(X, Y) :-
     parent(X, Y),
     parent(Z, Y),
     X \= Z,
-    female(Z).
+    fact_female(Z).
 
 father(X, Y) :-
     parent(X, Y),
-    male(X).
+    fact_male(X).
 
 % Child ------------------------------------------------------------------------
 
