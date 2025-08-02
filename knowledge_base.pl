@@ -70,6 +70,10 @@ contradiction(fact_brother(X, X)) :- true.
 % Parent contradictions
 contradiction(fact_parent(_, Y)) :- parent(L, Y), is_list(L), \+ length(L, 1).
 contradiction(fact_parent(L, Y)) :- is_list(L), length(L, S1), findall(X, parent(X, Y), L2), length(L2, S2), S1+S2>2.
+contradiction(fact_parent(L, _)) :- is_list(L), member(X, L), member(Y, L), male(X), male(Y), X \= Y.
+contradiction(fact_parent(X, Y)) :- male(X), parent(Z, Y), male(Z).
+contradiction(fact_parent(L, _)) :- is_list(L), member(X, L), member(Y, L), female(X), female(Y), X \= Y.
+contradiction(fact_parent(X, Y)) :- female(X), parent(Z, Y), female(Z).
 
 contradiction(fact_parent(X, X)) :- true.
 contradiction(fact_parent(_, Y)) :- parent(A, Y), parent(B, Y), A \= B.
