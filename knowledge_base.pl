@@ -66,11 +66,14 @@ contradiction(fact_brother(X, X)) :- true.
 
 % Parent contradictions
 contradiction(fact_parent(X, X)) :- true.
+contradiction(fact_parent(_, Y)) :- parent(A, Y), parent(B, Y), A \= B.
 
 contradiction(fact_mother(X, _)) :- male(X).
+contradiction(fact_mother(X, Y)) :- mother(Z, Y), X \= Z.
 contradiction(fact_mother(X, X)) :- true.
 
 contradiction(fact_father(X, _)) :- female(X).
+contradiction(fact_father(X, Y)) :- father(Z, Y), X \= Z.
 contradiction(fact_father(X, X)) :- true.
 
 % Child contradictions
@@ -133,7 +136,6 @@ fact_male(X) :- fact_uncle(X, _).
 
 fact_male(X) :- fact_grandfather(X, _).
 
-
 male(X) :- fact_male(X).
 
 male(X) :- father(X, _).
@@ -141,8 +143,6 @@ male(X) :- father(X, _).
 female(X) :- fact_female(X).
 
 female(X) :- mother(X, _).
-
-
 
 % Parent -----------------------------------------------------------------------
 
