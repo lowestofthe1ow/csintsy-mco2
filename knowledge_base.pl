@@ -78,6 +78,7 @@ contradiction(fact_father(X, X)) :- true.
 
 % Child contradictions
 contradiction(fact_child(X, X)) :- true.
+contradiction(fact_child(Y, _)) :- parent(A, Y), parent(B, Y), A \= B.
 
 % Grandparent contradictions
 contradiction(fact_grandfather(X, _)) :- female(X).
