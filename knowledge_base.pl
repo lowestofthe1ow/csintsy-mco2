@@ -26,26 +26,137 @@
 
 % Define a wrapper procedure around assertz()
 
-% Case when asserting with a defined predicate and no contradictions (valid)
-safe_assertz(Term) :-
-     % "Extract" the functor name and arity from Term
-    functor(Term, Name, Arity),
-    current_predicate(Name/Arity),
-    \+ contradiction(Term),
-    assertz(Term).
+safe_assertz(Fact) :-
+    (   valid_fact(Fact)
+    ->  Fact =.. [F | Args],
+        (   Args = [ListArg], is_list(ListArg)
+        ->  % Handle unary fact with list
+            assert_list_with_rollback(F, ListArg)
+        ;   % Handle normal unary/binary/multi facts
+            assert_multi(F, Args)
+        )
+    ;   throw(error(invalid_fact(Fact), safe_assertz/1))
+    ).
 
+% Public 2-arg version
+assert_list_with_rollback(F, List) :-
+    assert_list_with_rollback(F, List, []).
+
+% Internal 3-arg version
+assert_list_with_rollback(_, [], _) :- !.
+assert_list_with_rollback(F, [X|Xs], Accumulated) :-
+    Fact =.. [F, X],
+    (   contradiction(Fact)
+    ->  maplist(retract, Accumulated),
+        throw(error(contradiction(Fact), safe_assertz/1))
+    ;   (   Fact
+        ->  assert_list_with_rollback(F, Xs, Accumulated)
+        ;   assertz(Fact),
+            assert_list_with_rollback(F, Xs, [Fact|Accumulated])
+        )
+    ).
+
+% Handle assertion of multi-argument facts (arity 1+)
+assert_multi(F, Args) :-
+    Fact =.. [F | Args],
+    (   contradiction(Fact)
+    ->  throw(error(contradiction(Fact), safe_assertz/1))
+    ;   Fact
+    ->  true
+    ;   assertz(Fact)
+    ).
+
+% Single atom assertion
+assert_single(F, X) :-
+    Fact =.. [F, X],
+    (   contradiction(Fact)
+    ->  throw(error(contradiction(Fact), safe_assertz/1))
+    ;   Fact
+    ->  true
+    ;   assertz(Fact)
+    ).
+
+    
 % Case when asserting with an undefined predicate (invalid)
-safe_assertz(Term) :-
-    functor(Term, Name, Arity),
-    \+ current_predicate(Name/Arity),
-    % Throw unknown predicate error
-    throw(error(unknown_predicate(Term), safe_assertz/1)).
+% safer_assertz(Term) :-
+%    functor(Term, Name, Arity),
+%    \+ current_predicate(Name/Arity),
+%    % Throw unknown predicate error
+%    throw(error(unknown_predicate(Term), safe_assertz/1)).
 
-% Case when asserting with a contradiction (invalid)
-safe_assertz(Term) :-
-    contradiction(Term),
-    % Throw error
-    throw(error(contradiction(Term), safe_assertz/1)).
+
+% VALID FACTS ==================================================================
+valid_fact(fact_parent(A, _)) :-
+    (
+        atom(A)
+    ;
+        is_list(A),
+        length(A, Len), Len =< 2,
+        maplist(atom, A)
+    ).
+
+valid_fact(fact_mother(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_father(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_child(A,B)) :-   
+    atom(A), 
+    (is_list(B); atom(B)).
+
+valid_fact(fact_daughter(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_son(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_sibling(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_sister(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_brother(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_grandparent(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_grandfather(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_grandmother(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_aunt(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_uncle(A,B)) :- 
+    atom(A),
+    atom(B).
+
+valid_fact(fact_male(L)) :-
+    (   atom(L)
+    ;   is_list(L), maplist(atom, L)
+    ).
+
+valid_fact(fact_female(L)) :-
+    (   atom(L)
+    ;   is_list(L), maplist(atom, L)
+    ).
+
 
 % CONTRADICTION RULES ==========================================================
 
@@ -77,29 +188,34 @@ contradiction(fact_parent(X, Y)) :- female(X), parent(Z, Y), female(Z).
 
 contradiction(fact_parent(X, X)) :- true.
 contradiction(fact_parent(_, Y)) :- parent(A, Y), parent(B, Y), A \= B.
+contradiction(fact_parent(X, Y)) :- parent(Y, X).
 contradiction(fact_parent(L, X)) :- is_list(L), member(X, L).
 contradiction(fact_parent(X, L)) :- is_list(L), member(X, L).
 contradiction(fact_parent(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
 
 contradiction(fact_mother(X, _)) :- male(X).
 contradiction(fact_mother(X, Y)) :- mother(Z, Y), X \= Z.
+contradiction(fact_mother(X, Y)) :- mother(Y, X).
 contradiction(fact_mother(X, X)) :- true.
 contradiction(fact_mother(L, _)) :- is_list(L), length(L, S), S>1.
 
 contradiction(fact_father(X, _)) :- female(X).
 contradiction(fact_father(X, Y)) :- father(Z, Y), X \= Z.
+contradiction(fact_father(X, Y)) :- father(Y, X).
 contradiction(fact_father(X, X)) :- true.
 contradiction(fact_father(L, _)) :- is_list(L), length(L, S), S>1.
 
 % Child contradictions
 contradiction(fact_child(X, X)) :- true.
 contradiction(fact_child(Y, _)) :- parent(A, Y), parent(B, Y), A \= B.
+contradiction(fact_child(X, Y)) :- child(Y, X).
+
 
 % Grandparent contradictions
 
 contradiction(fact_grandparent(L, Y)) :- is_list(L), length(L, S1), findall(X, grandparent(X, Y), L2), length(L2, S2), S1+S2>4.
 contradiction(fact_grandparent(_, Y)) :- findall(X, grandparent(X, Y), L), length(L, S), S>=4.
-
+contradiction(fact_grandparent(X, Y)) :- grandparent(Y, X).
 contradiction(fact_grandparent(X, X)) :- true.
 contradiction(fact_grandparent(L, X)) :- is_list(L), member(X, L).
 contradiction(fact_grandparent(X, L)) :- is_list(L), member(X, L).
@@ -107,6 +223,7 @@ contradiction(fact_grandparent(L1, L2)) :- is_list(L1), is_list(L2), member(X, L
 
 contradiction(fact_grandfather(X, _)) :- female(X).
 contradiction(fact_grandfather(X, X)) :- true.
+contradiction(fact_grandfather(X, Y)) :- grandfather(Y, X).
 contradiction(fact_grandfather(_, Y)) :- grandfather(L, Y), is_list(L), \+ length(L, 1).
 contradiction(fact_grandfather(_, Y)) :- grandfather(X, Y), grandfather(Z, Y), X \= Z.
 contradiction(fact_grandfather(L, Y)) :- is_list(L), length(L, S1), findall(X, grandfather(X, Y), L2), length(L2, S2), S1+S2>2.
@@ -118,6 +235,7 @@ contradiction(fact_grandfather(L1, L2)) :- is_list(L1), is_list(L2), member(X, L
 
 contradiction(fact_grandmother(X, _)) :- male(X).
 contradiction(fact_grandmother(X, X)) :- true.
+contradiction(fact_grandmother(X, Y)) :- grandmother(Y, X).
 contradiction(fact_grandmother(_, Y)) :- grandmother(L, Y), is_list(L), \+ length(L, 1).
 contradiction(fact_grandmother(L, Y)) :- is_list(L), length(L, S1), findall(X, grandmother(X, Y), L2), length(L2, S2), S1+S2>2.
 
@@ -138,6 +256,7 @@ contradiction(fact_daughter(X, _)) :- male(X).
 contradiction(fact_daughter(X, X)) :- true.
 
 contradiction(fact_daughter(X, X)) :- true.
+contradiction(fact_daughter(X, Y)) :- daughter(Y, X).
 contradiction(fact_daughter(L, X)) :- is_list(L), member(X, L).
 contradiction(fact_daughter(X, L)) :- is_list(L), member(X, L).
 contradiction(fact_daughter(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
@@ -147,6 +266,7 @@ contradiction(fact_son(X, _)) :- female(X).
 contradiction(fact_son(X, X)) :- true.
 
 contradiction(fact_son(X, X)) :- true.
+contradiction(fact_son(X, Y)) :- son(Y, X).
 contradiction(fact_son(L, X)) :- is_list(L), member(X, L).
 contradiction(fact_son(X, L)) :- is_list(L), member(X, L).
 contradiction(fact_son(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
@@ -208,9 +328,17 @@ male(X) :- fact_male(X).
 
 male(X) :- father(X, _).
 
+male(List) :-
+    is_list(List),
+    forall(member(X, List), male(X)).
+
 female(X) :- fact_female(X).
 
 female(X) :- mother(X, _).
+
+female(List) :-
+    is_list(List),
+    forall(member(X, List), female(X)).
 
 % Parent -----------------------------------------------------------------------
 
