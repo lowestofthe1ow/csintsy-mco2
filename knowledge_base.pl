@@ -24,67 +24,29 @@
 :- dynamic fact_aunt    /2.
 :- dynamic fact_uncle   /2.
 
-% Define a wrapper procedure around assertz()
+% Case when asserting with a defined predicate and no contradictions (valid)
 
-safe_assertz(Fact) :-
-    (   valid_fact(Fact)
-    ->  Fact =.. [F | Args],
-        (   Args = [ListArg], is_list(ListArg)
-        ->  % Handle unary fact with list
-            assert_list_with_rollback(F, ListArg)
-        ;   % Handle normal unary/binary/multi facts
-            assert_multi(F, Args)
-        )
-    ;   throw(error(invalid_fact(Fact), safe_assertz/1))
-    ).
+safe_assertz(Term) :-
+     % "Extract" the functor name and arity from Term
+    valid_fact(Term),
+    functor(Term, Name, Arity),
+    current_predicate(Name/Arity),
+    \+ contradiction(Term),
+    assertz(Term).
 
-% Public 2-arg version
-assert_list_with_rollback(F, List) :-
-    assert_list_with_rollback(F, List, []).
+safe_assertz(Term) :-
+    contradiction(Term),
+    % Throw error
+    throw(error(contradiction(Term), safe_assertz/1)).
 
-% Internal 3-arg version
-assert_list_with_rollback(_, [], _) :- !.
-assert_list_with_rollback(F, [X|Xs], Accumulated) :-
-    Fact =.. [F, X],
-    (   contradiction(Fact)
-    ->  maplist(retract, Accumulated),
-        throw(error(contradiction(Fact), safe_assertz/1))
-    ;   (   Fact
-        ->  assert_list_with_rollback(F, Xs, Accumulated)
-        ;   assertz(Fact),
-            assert_list_with_rollback(F, Xs, [Fact|Accumulated])
-        )
-    ).
-
-% Handle assertion of multi-argument facts (arity 1+)
-assert_multi(F, Args) :-
-    Fact =.. [F | Args],
-    (   contradiction(Fact)
-    ->  throw(error(contradiction(Fact), safe_assertz/1))
-    ;   Fact
-    ->  true
-    ;   assertz(Fact)
-    ).
-
-% Single atom assertion
-assert_single(F, X) :-
-    Fact =.. [F, X],
-    (   contradiction(Fact)
-    ->  throw(error(contradiction(Fact), safe_assertz/1))
-    ;   Fact
-    ->  true
-    ;   assertz(Fact)
-    ).
-
-    
 % Case when asserting with an undefined predicate (invalid)
-% safer_assertz(Term) :-
-%    functor(Term, Name, Arity),
-%    \+ current_predicate(Name/Arity),
-%    % Throw unknown predicate error
-%    throw(error(unknown_predicate(Term), safe_assertz/1)).
-
-
+safe_assertz(Term) :-
+    valid_fact(Term),
+    functor(Term, Name, Arity),
+    \+ current_predicate(Name/Arity),
+    % Throw unknown predicate error
+    throw(error(unknown_predicate(Term), safe_assertz/1)).
+    
 % VALID FACTS ==================================================================
 valid_fact(fact_parent(A, _)) :-
     (
@@ -402,10 +364,10 @@ mother(X, Y) :-
     parent(X, Y),
     fact_female(X).
 
-mother(X, Y) :- 
-    parent(Z, Y),
-    fact_father(X, Y),
-    X \= Z.
+%mother(X, Y) :- 
+%    parent(Z, Y),
+%    fact_father(X, Y),
+%    X \= Z.
 
 % Father -----------------------------------------------------------------------
 
@@ -421,10 +383,10 @@ father(X, Y) :-
     parent(X, Y),
     fact_male(X).
 
-father(X, Y) :- 
-    parent(Z, Y),
-    fact_mother(X, Y),
-    X \= Z.
+%father(X, Y) :- 
+%    parent(Z, Y),
+%    fact_mother(X, Y),
+%    X \= Z.
 
 % Child ------------------------------------------------------------------------
 
@@ -515,6 +477,16 @@ sibling(X, Y) :-
     parent(Z, X),
     parent(Z, Y),
     X \== Y.
+
+sibling(X, Z) :-
+    sibling(X, Y),
+    sibling(Y, Z),
+    X \= Z,
+    ((father(FX, X), father(FY, Y), father(FZ, Z),
+    FX \= FY, FX \= FZ, FY \= FZ) ;
+    (mother(MX, X), mother(MY, Y), mother(MZ, Z),
+    MX \= MY, MX \= MZ, MY \= MZ)).
+   
 
 % Sister -----------------------------------------------------------------------
 
