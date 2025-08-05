@@ -31,6 +31,7 @@ safe_assertz(Term) :-
      % "Extract" the functor name and arity from Term
     functor(Term, Name, Arity),
     current_predicate(Name/Arity),
+    \+ unsupported(Term),
     \+ contradiction(Term),
     assertz(Term).
 
@@ -41,148 +42,215 @@ safe_assertz(Term) :-
     % Throw unknown predicate error
     throw(error(unknown_predicate(Term), safe_assertz/1)).
 
+% Case when asserting with an unsupported combination of arguments (invalid)
+safe_assertz(Term) :-
+    unsupported(Term),
+    % Throw error
+    throw(error(unsupported(Term), safe_assertz/1)).
+
 % Case when asserting with a contradiction (invalid)
 safe_assertz(Term) :-
     contradiction(Term),
     % Throw error
     throw(error(contradiction(Term), safe_assertz/1)).
 
+% UNSUPPORTED PREDICATES =======================================================
+
+unsupported(fact_sibling(X)) :- \+ is_list(X).
+
+% Things get complex with lists for grandparents, so we ban them
+
+unsupported(fact_grandparent(L, _)) :- is_list(L).
+
+unsupported(fact_grandmother(L, _)) :- is_list(L).
+
+unsupported(fact_grandfather(L, _)) :- is_list(L).
+
 % CONTRADICTION RULES ==========================================================
 
 % Note: At the application level, we only assert "fact_" predicates
 
-% Gender contradictions
+% Sex --------------------------------------------------------------------------
+
 contradiction(fact_female(X)) :- male(X).
+
 contradiction(fact_male(X)) :- female(X).
 
-% Sibling contradictions
-contradiction(fact_sibling(X, X)) :- true.
-contradiction(fact_sibling(L, X)) :- is_list(L), member(X, L).
-contradiction(fact_sibling(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_sibling(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
+% Parent -----------------------------------------------------------------------
 
-contradiction(fact_sister(X, _)) :- male(X).
-contradiction(fact_sister(X, X)) :- true.
+contradiction(fact_parent(X, Y)) :- ancestor(Y, X).
 
-contradiction(fact_brother(X, _)) :- female(X).
-contradiction(fact_brother(X, X)) :- true.
-
-% Parent contradictions
 contradiction(fact_parent(_, Y)) :- parent(L, Y), is_list(L), \+ length(L, 1).
-contradiction(fact_parent(L, Y)) :- is_list(L), length(L, S1), findall(X, parent(X, Y), L2), length(L2, S2), S1+S2>2.
-contradiction(fact_parent(L, _)) :- is_list(L), member(X, L), member(Y, L), male(X), male(Y), X \= Y.
-contradiction(fact_parent(X, Y)) :- male(X), parent(Z, Y), male(Z).
-contradiction(fact_parent(L, _)) :- is_list(L), member(X, L), member(Y, L), female(X), female(Y), X \= Y.
-contradiction(fact_parent(X, Y)) :- female(X), parent(Z, Y), female(Z).
+
+% When asserting a list to be a parent of an Y, make sure it would not result in Y having more than 2 parents
+contradiction(fact_parent(L1, Y)) :-
+    is_list(L1),
+    length(L1, S1),
+    findall(X, parent(X, Y), L2),
+    length(L2, S2),
+    S1 + S2 > 2.
+
+% Avoid same-sex parents (both male) in lists
+contradiction(fact_parent(L, _)) :-
+    is_list(L),
+    member(X, L),
+    member(Y, L),
+    male(X),
+    male(Y),
+    X \= Y.
+
+% Contradiction if existing father
+contradiction(fact_parent(X, Y)) :-
+    male(X),
+    father(_, Y).
+
+% Avoid same-sex parents (both female) in lists
+contradiction(fact_parent(L, _)) :-
+    is_list(L),
+    member(X, L),
+    member(Y, L),
+    female(X),
+    female(Y),
+    X \= Y.
+
+% Contradiction if existing mother
+contradiction(fact_parent(X, Y)) :-
+    female(X),
+    mother(_, Y).
 
 contradiction(fact_parent(X, X)) :- true.
+
+% Limit to 2 parents
 contradiction(fact_parent(_, Y)) :- parent(A, Y), parent(B, Y), A \= B.
+
+% You cannot be your own parent (lists)
+
 contradiction(fact_parent(L, X)) :- is_list(L), member(X, L).
+
 contradiction(fact_parent(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_parent(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
+
+contradiction(fact_parent(L1, L2)) :-
+    is_list(L1),
+    is_list(L2),
+    member(X, L1),
+    member(X, L2).
+
+% Mother -----------------------------------------------------------------------
+
+contradiction(fact_mother(X, Y)) :- contradiction(fact_parent(X, Y)).
 
 contradiction(fact_mother(X, _)) :- male(X).
+
 contradiction(fact_mother(X, Y)) :- mother(Z, Y), X \= Z.
-contradiction(fact_mother(X, X)) :- true.
-contradiction(fact_mother(L, _)) :- is_list(L), length(L, S), S>1.
+
+contradiction(fact_mother(L, _)) :- is_list(L), length(L, S), S > 1.
+
+% Father -----------------------------------------------------------------------
+
+contradiction(fact_father(X, Y)) :- contradiction(fact_parent(X, Y)).
 
 contradiction(fact_father(X, _)) :- female(X).
+
 contradiction(fact_father(X, Y)) :- father(Z, Y), X \= Z.
-contradiction(fact_father(X, X)) :- true.
-contradiction(fact_father(L, _)) :- is_list(L), length(L, S), S>1.
 
-% Child contradictions
-contradiction(fact_child(X, X)) :- true.
-contradiction(fact_child(Y, _)) :- parent(A, Y), parent(B, Y), A \= B.
+contradiction(fact_father(L, _)) :- is_list(L), length(L, S), S > 1.
 
-% Grandparent contradictions
+% Child ------------------------------------------------------------------------
 
-contradiction(fact_grandparent(L, Y)) :- is_list(L), length(L, S1), findall(X, grandparent(X, Y), L2), length(L2, S2), S1+S2>4.
-contradiction(fact_grandparent(_, Y)) :- findall(X, grandparent(X, Y), L), length(L, S), S>=4.
+contradiction(fact_child(X, Y)) :- contradiction(fact_parent(Y, X)).
+
+% Daughter ---------------------------------------------------------------------
+
+contradiction(fact_daughter(X, Y)) :- male(X).
+
+contradiction(fact_daughter(X, Y)) :- contradiction(fact_child(X, Y)).
+
+% Son --------------------------------------------------------------------------
+
+contradiction(fact_son(X, Y)) :- female(X).
+
+contradiction(fact_son(X, Y)) :- contradiction(fact_child(X, Y)).
+
+% Sibling ----------------------------------------------------------------------
+
+contradiction(fact_sibling(X, X)) :- true.
+
+contradiction(fact_sibling(L, X)) :- is_list(L), member(X, L).
+
+contradiction(fact_sibling(X, L)) :- is_list(L), member(X, L).
+
+contradiction(fact_sibling(L1, L2)) :-
+    is_list(L1),
+    is_list(L2),
+    member(X, L1),
+    member(X, L2).
+
+% Sister -----------------------------------------------------------------------
+
+contradiction(fact_sister(X, Y)) :- contradiction(fact_sibling(X, Y)).
+
+contradiction(fact_sister(X, _)) :- male(X).
+
+% Brother ----------------------------------------------------------------------
+
+contradiction(fact_brother(X, Y)) :- contradiction(fact_sibling(X, Y)).
+
+contradiction(fact_brother(X, _)) :- female(X).
+
+% Grandparent ------------------------------------------------------------------
+
+contradiction(fact_grandparent(X, Y)) :- ancestor(Y, X).
+
+contradiction(fact_grandparent(_, Y)) :-
+    findall(X, grandparent(X, Y), L),
+    length(L, S),
+    S>=4.
 
 contradiction(fact_grandparent(X, X)) :- true.
-contradiction(fact_grandparent(L, X)) :- is_list(L), member(X, L).
-contradiction(fact_grandparent(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_grandparent(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
+
+% Grandfather ------------------------------------------------------------------
+
+contradiction(fact_grandfather(X, Y)) :- contradiction(fact_grandparent(X, Y)).
 
 contradiction(fact_grandfather(X, _)) :- female(X).
-contradiction(fact_grandfather(X, X)) :- true.
-contradiction(fact_grandfather(_, Y)) :- grandfather(L, Y), is_list(L), \+ length(L, 1).
-contradiction(fact_grandfather(_, Y)) :- grandfather(X, Y), grandfather(Z, Y), X \= Z.
-contradiction(fact_grandfather(L, Y)) :- is_list(L), length(L, S1), findall(X, grandfather(X, Y), L2), length(L2, S2), S1+S2>2.
 
-contradiction(fact_grandfather(X, X)) :- true.
-contradiction(fact_grandfather(L, X)) :- is_list(L), member(X, L).
-contradiction(fact_grandfather(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_grandfather(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
+contradiction(fact_grandfather(_, Y)) :-
+    grandfather(X, Y),
+    grandfather(Z, Y),
+    X \= Z.
+
+% Grandmother ------------------------------------------------------------------
+
+contradiction(fact_grandmother(X, Y)) :- contradiction(fact_grandparent(X, Y)).
 
 contradiction(fact_grandmother(X, _)) :- male(X).
-contradiction(fact_grandmother(X, X)) :- true.
-contradiction(fact_grandmother(_, Y)) :- grandmother(L, Y), is_list(L), \+ length(L, 1).
-contradiction(fact_grandmother(L, Y)) :- is_list(L), length(L, S1), findall(X, grandmother(X, Y), L2), length(L2, S2), S1+S2>2.
 
-contradiction(fact_grandmother(X, X)) :- true.
-contradiction(fact_grandmother(L, X)) :- is_list(L), member(X, L).
-contradiction(fact_grandmother(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_grandmother(_, Y)) :- grandmother(X, Y), grandmother(Z, Y), X \= Z.
-contradiction(fact_grandmother(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
+contradiction(fact_grandmother(_, Y)) :-
+    grandmother(X, Y),
+    grandmother(Z, Y),
+    X \= Z.
 
-% Child/Daughter/Son contradictions
-contradiction(fact_child(X, X)) :- true.
-contradiction(fact_child(L, X)) :- is_list(L), member(X, L).
-contradiction(fact_child(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_child(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
-contradiction(fact_child(_, L)) :- is_list(L), length(L, S), S>2.
+% Aunt -------------------------------------------------------------------------
 
-contradiction(fact_daughter(X, _)) :- male(X).
-contradiction(fact_daughter(X, X)) :- true.
-
-contradiction(fact_daughter(X, X)) :- true.
-contradiction(fact_daughter(L, X)) :- is_list(L), member(X, L).
-contradiction(fact_daughter(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_daughter(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
-contradiction(fact_daughter(_, L)) :- is_list(L), length(L, S), S>2.
-
-contradiction(fact_son(X, _)) :- female(X).
-contradiction(fact_son(X, X)) :- true.
-
-contradiction(fact_son(X, X)) :- true.
-contradiction(fact_son(L, X)) :- is_list(L), member(X, L).
-contradiction(fact_son(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_son(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
-contradiction(fact_son(_, L)) :- is_list(L), length(L, S), S>2.
-
-% Aunt/Uncle contradictions
 contradiction(fact_aunt(X, _)) :- male(X).
+
+contradiction(fact_aunt(X, Y)) :- ancestor(Y, X).
+
 contradiction(fact_aunt(X, X)) :- true.
-contradiction(fact_aunt(L, X)) :- is_list(L), member(X, L).
-contradiction(fact_aunt(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_aunt(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
+
+% Uncle ------------------------------------------------------------------------
 
 contradiction(fact_uncle(X, _)) :- female(X).
+
+contradiction(fact_uncle(X, Y)) :- ancestor(Y, X).
+
 contradiction(fact_uncle(X, X)) :- true.
-contradiction(fact_uncle(L, X)) :- is_list(L), member(X, L).
-contradiction(fact_uncle(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_uncle(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
-
-% General catch: no one can be related to themselves
-contradiction(fact_related(X, X)) :- true.
-contradiction(fact_related(L, X)) :- is_list(L), member(X, L).
-contradiction(fact_related(X, L)) :- is_list(L), member(X, L).
-contradiction(fact_related(L1, L2)) :- is_list(L1), is_list(L2), member(X, L1), member(X, L2).
-
-% Prevent someone from being both parent and sibling of same person
-contradiction(fact_parent(X, Y)) :-
-    sibling(X, Y).
-
-% Prevent someone from being their own ancestor
-contradiction(fact_parent(X, Y)) :-
-    parent(Y, X).  % cycle: Y is also parent of X
 
 % RULES ========================================================================
 
-% Notation: parent(X, Y) should mean "X is a parent of Y"
+% Sex --------------------------------------------------------------------------
 
+% Note: For sex, we use the fact_ predicates as a more general intermediate to avoid infinite recursion, instead of just for assertions
 
 fact_female(X) :- fact_daughter(X, _).
 
@@ -206,11 +274,21 @@ fact_male(X) :- fact_grandfather(X, _).
 
 male(X) :- fact_male(X).
 
-male(X) :- father(X, _).
+male(X) :- fact_male(L), is_list(L), member(X, L).
+
+male(L) :- is_list(L), forall(member(X, L), male(X)).
+
+% We use father/2 because we must be able to take into account concluding that X is male because he is a parent of someone who already has a defined mother. 
+male(X) :- father(X, _). 
 
 female(X) :- fact_female(X).
 
+% Same applies for mother/2
 female(X) :- mother(X, _).
+
+female(X) :- fact_female(L), is_list(L), member(X, L).
+
+female(L) :- is_list(L), forall(member(X, L), female(X)).
 
 % Parent -----------------------------------------------------------------------
 
@@ -274,6 +352,10 @@ mother(X, Y) :-
     parent(X, Y),
     fact_female(X).
 
+mother(X, Y) :-
+    parent(X, Y),
+    fact_female(L), is_list(L), member(X, L).
+
 mother(X, Y) :- 
     parent(Z, Y),
     fact_father(X, Y),
@@ -292,6 +374,10 @@ father(X, Y) :-
 father(X, Y) :-
     parent(X, Y),
     fact_male(X).
+
+father(X, Y) :-
+    parent(X, Y),
+    fact_male(L), is_list(L), member(X, L).
 
 father(X, Y) :- 
     parent(Z, Y),
@@ -379,6 +465,22 @@ sibling(X, Y) :-
     fact_brother(X, Y);
     fact_brother(Y, X).
 
+sibling(X, Y) :-
+    fact_aunt(X, Z),
+    parent(Y, Z).
+
+sibling(X, Y) :-
+    fact_aunt(Y, Z),
+    parent(X, Z).
+
+sibling(X, Y) :-
+    fact_uncle(X, Z),
+    parent(Y, Z).
+
+sibling(X, Y) :-
+    fact_uncle(Y, Z),
+    parent(X, Z).
+
 % Main definition
 % Already commutative by definition
 sibling(X, Y) :-
@@ -422,25 +524,6 @@ grandparent(X, Y) :-
     parent(X, Z),
     parent(Z, Y).
 
-grandparent(X, Y) :-
-    fact_grandparent(X, L),
-    is_list(L),
-    member(Y, L).
-
-grandparent(X, Y) :-
-    fact_grandmother(X, L),
-    is_list(L),
-    member(Y, L).
-
-grandparent(X, Y) :-
-    fact_grandfather(X, L),
-    is_list(L),
-    member(Y, L).
-
-grandparent(X, L) :-
-    is_list(L),
-    forall(member(Z, L), grandparent(X, Z)).
-
 % Grandfather ------------------------------------------------------------------
 
 grandfather(X, Y) :-
@@ -479,31 +562,32 @@ uncle(X, Y) :-
     parent(Z, Y),
     male(X).
 
+ancestor(X, Y) :-
+    parent(X, Y).
+
+ancestor(X, Y) :-
+    grandparent(X, Y).
+
+ancestor(X, Y) :-
+    parent(P, Y),
+    ancestor(X, P).
+
 % Related ----------------------------------------------------------------------
 
-related(X, Y) :-
-    parent(X, Y);
-    parent(Y, X).
+related([X, Y]) :- related(X, Y).
 
 related(X, Y) :-
     sibling(X, Y).
 
-% ancestor
 related(X, Y) :-
-    parent(P, Y),
-    related(X, P).
+    ancestor(Z, X),
+    ancestor(Z, Y).
 
-% descendant
 related(X, Y) :-
-    parent(P, X),
-    related(P, Y).
+    ancestor(A, X),
+    ancestor(B, Y),
+    sibling(A, B).
 
-% X is a sibling of an ancestor of Y
-related(X, Y) :-
-    parent(P, Y),
-    sibling(X, P).
+related(X, Y) :- ancestor(X, Y).
 
-% Y is a sibling of an ancestor of X
-related(X, Y) :-
-    parent(P, X),
-    sibling(Y, P).
+related(X, Y) :- ancestor(Y, X).
