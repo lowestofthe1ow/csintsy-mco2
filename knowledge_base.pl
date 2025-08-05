@@ -348,11 +348,7 @@ mother(X, Y) :-
 
 mother(X, Y) :-
     parent(X, Y),
-    fact_female(X).
-
-mother(X, Y) :-
-    parent(X, Y),
-    fact_female(L), is_list(L), member(X, L).
+    female(X).
 
 % Father -----------------------------------------------------------------------
 
@@ -366,11 +362,7 @@ father(X, Y) :-
 
 father(X, Y) :-
     parent(X, Y),
-    fact_male(X).
-
-father(X, Y) :-
-    parent(X, Y),
-    fact_male(L), is_list(L), member(X, L).
+    male(X).
 
 % Child ------------------------------------------------------------------------
 
