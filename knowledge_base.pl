@@ -74,7 +74,11 @@ unsupported(fact_grandfather(L, _)) :- is_list(L).
 
 contradiction(fact_female(X)) :- male(X).
 
+contradiction(fact_female(L)) :- is_list(L), member(X, L), male(X).
+
 contradiction(fact_male(X)) :- female(X).
+
+contradiction(fact_male(L)) :- is_list(L), member(X, L), female(X).
 
 % Parent -----------------------------------------------------------------------
 
