@@ -161,13 +161,13 @@ contradiction(fact_child(X, Y)) :- contradiction(fact_parent(Y, X)).
 
 % Daughter ---------------------------------------------------------------------
 
-contradiction(fact_daughter(X, Y)) :- male(X).
+contradiction(fact_daughter(X, _)) :- male(X).
 
 contradiction(fact_daughter(X, Y)) :- contradiction(fact_child(X, Y)).
 
 % Son --------------------------------------------------------------------------
 
-contradiction(fact_son(X, Y)) :- female(X).
+contradiction(fact_son(X, _)) :- female(X).
 
 contradiction(fact_son(X, Y)) :- contradiction(fact_child(X, Y)).
 
@@ -278,17 +278,21 @@ male(X) :- fact_male(L), is_list(L), member(X, L).
 
 male(L) :- is_list(L), forall(member(X, L), male(X)).
 
-% We use father/2 because we must be able to take into account concluding that X is male because he is a parent of someone who already has a defined mother. 
+% We use father/2 and grandfather/2 because we must be able to take into account concluding that X is male because he is a parent of someone who already has a defined mother. 
 male(X) :- father(X, _). 
 
-female(X) :- fact_female(X).
+male(X) :- grandfather(X, _). 
 
-% Same applies for mother/2
-female(X) :- mother(X, _).
+female(X) :- fact_female(X).
 
 female(X) :- fact_female(L), is_list(L), member(X, L).
 
 female(L) :- is_list(L), forall(member(X, L), female(X)).
+
+% Same applies for mother/2 and grandmother/2
+female(X) :- mother(X, _).
+
+female(X) :- grandmother(X, _). 
 
 % Parent -----------------------------------------------------------------------
 
@@ -303,6 +307,11 @@ parent(X, Y) :- fact_child(Y, X).
 parent(X, Y) :- fact_son(Y, X).
 
 parent(X, Y) :- fact_daughter(Y, X).
+
+parent(X, Y) :-
+    fact_parent(L, Y),
+    is_list(L),
+    member(X, L).
 
 parent(X, Y) :-
     fact_parent(X, L),
@@ -531,7 +540,17 @@ grandfather(X, Y) :-
 
 grandfather(X, Y) :-
     grandparent(X, Y),
-    male(X).
+    findall(Z, (grandparent(Z, Y), fact_female(Z)), L),
+    length(L, S),
+    S > 1.
+
+grandfather(X, Y) :-
+    grandparent(X, Y),
+    fact_male(X).
+
+grandfather(X, Y) :-
+    grandparent(X, Y),
+    fact_male(L), is_list(L), member(X, L).
 
 % Grandmother ------------------------------------------------------------------
 
@@ -540,7 +559,17 @@ grandmother(X, Y) :-
 
 grandmother(X, Y) :-
     grandparent(X, Y),
-    female(X).
+    findall(Z, (grandparent(Z, Y), fact_male(Z)), L),
+    length(L, S),
+    S > 1.
+
+grandmother(X, Y) :-
+    grandparent(X, Y),
+    fact_female(X).
+
+grandmother(X, Y) :-
+    grandparent(X, Y),
+    fact_female(L), is_list(L), member(X, L).
 
 % Aunt -------------------------------------------------------------------------
 
