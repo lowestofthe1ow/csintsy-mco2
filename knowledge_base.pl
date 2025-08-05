@@ -17,7 +17,6 @@
 :- dynamic fact_sister   /2.
 :- dynamic fact_brother  /2.
 
-:- dynamic fact_grandparent /2.
 :- dynamic fact_grandfather /2.
 :- dynamic fact_grandmother /2.
 
@@ -60,8 +59,6 @@ unsupported(fact_sibling(X)) :- \+ is_list(X).
 
 % Things get complex with lists for grandparents, so we ban them
 
-unsupported(fact_grandparent(L, _)) :- is_list(L).
-
 unsupported(fact_grandmother(L, _)) :- is_list(L).
 
 unsupported(fact_grandfather(L, _)) :- is_list(L).
@@ -84,15 +81,20 @@ contradiction(fact_male(L)) :- is_list(L), member(X, L), female(X).
 
 contradiction(fact_parent(X, Y)) :- ancestor(Y, X).
 
-contradiction(fact_parent(_, Y)) :- parent(L, Y), is_list(L), \+ length(L, 1).
+contradiction(fact_parent(X, Y)) :-
+    \+ is_list(X),
+    findall(Z, (parent(Z, Y)), L),  % Find all parents of Y
+    flatten(L, Flattened),          % Un-nest nested lists
+    sort(Flattened, Sorted),        % Removes duplicates
+    length(Sorted, S),              % Get total number of parents of Y
+    \+ member(X, Sorted),           % If X is already a parent of Y, ignore
+    S >= 2.                         % If Y already has 2 parents, contradiction
 
-% When asserting a list to be a parent of an Y, make sure it would not result in Y having more than 2 parents
-contradiction(fact_parent(L1, Y)) :-
-    is_list(L1),
-    length(L1, S1),
-    findall(X, parent(X, Y), L2),
-    length(L2, S2),
-    S1 + S2 > 2.
+% Ban lists of more than 2 parents
+contradiction(fact_parent(L, _)) :-
+    is_list(L),
+    length(L, S),
+    S > 2.
 
 % Avoid same-sex parents (both male) in lists
 contradiction(fact_parent(L, _)) :-
@@ -105,8 +107,10 @@ contradiction(fact_parent(L, _)) :-
 
 % Contradiction if existing father
 contradiction(fact_parent(X, Y)) :-
+    \+ is_list(X),
     male(X),
-    father(_, Y).
+    father(Z, Y),
+    X \= Z.
 
 % Avoid same-sex parents (both female) in lists
 contradiction(fact_parent(L, _)) :-
@@ -120,12 +124,10 @@ contradiction(fact_parent(L, _)) :-
 % Contradiction if existing mother
 contradiction(fact_parent(X, Y)) :-
     female(X),
-    mother(_, Y).
+    mother(Z, Y),
+    X \= Z.
 
 contradiction(fact_parent(X, X)) :- true.
-
-% Limit to 2 parents
-contradiction(fact_parent(_, Y)) :- parent(A, Y), parent(B, Y), A \= B.
 
 % You cannot be your own parent (lists)
 
@@ -201,38 +203,31 @@ contradiction(fact_brother(X, Y)) :- contradiction(fact_sibling(X, Y)).
 
 contradiction(fact_brother(X, _)) :- female(X).
 
-% Grandparent ------------------------------------------------------------------
-
-contradiction(fact_grandparent(X, Y)) :- ancestor(Y, X).
-
-contradiction(fact_grandparent(_, Y)) :-
-    findall(X, grandparent(X, Y), L),
-    length(L, S),
-    S>=4.
-
-contradiction(fact_grandparent(X, X)) :- true.
-
 % Grandfather ------------------------------------------------------------------
 
-contradiction(fact_grandfather(X, Y)) :- contradiction(fact_grandparent(X, Y)).
+contradiction(fact_grandfather(X, X)) :- true.
+
+contradiction(fact_grandfather(X, Y)) :- ancestor(Y, X).
+
+contradiction(fact_grandfather(X, Y)) :-
+    grandfather(A, Y),
+    grandfather(B, Y),
+    A \= B, X \= A, X \= B.
 
 contradiction(fact_grandfather(X, _)) :- female(X).
 
-contradiction(fact_grandfather(_, Y)) :-
-    grandfather(X, Y),
-    grandfather(Z, Y),
-    X \= Z.
-
 % Grandmother ------------------------------------------------------------------
 
-contradiction(fact_grandmother(X, Y)) :- contradiction(fact_grandparent(X, Y)).
+contradiction(fact_grandmother(X, X)) :- true.
+
+contradiction(fact_grandmother(X, Y)) :- ancestor(Y, X).
+
+contradiction(fact_grandmother(X, Y)) :-
+    grandmother(A, Y),
+    grandmother(B, Y),
+    A \= B, X \= A, X \= B.
 
 contradiction(fact_grandmother(X, _)) :- male(X).
-
-contradiction(fact_grandmother(_, Y)) :-
-    grandmother(X, Y),
-    grandmother(Z, Y),
-    X \= Z.
 
 % Aunt -------------------------------------------------------------------------
 
@@ -256,36 +251,15 @@ contradiction(fact_uncle(X, X)) :- true.
 
 % Note: For sex, we use the fact_ predicates as a more general intermediate to avoid infinite recursion, instead of just for assertions
 
-fact_female(X) :- fact_daughter(X, _).
+female(X) :- fact_daughter(X, _).
 
-fact_female(X) :- fact_sister(X, _).
+female(X) :- fact_sister(X, _).
 
-fact_female(X) :- fact_mother(X, _).
+female(X) :- fact_mother(X, _).
 
-fact_female(X) :- fact_aunt(X, _).
+female(X) :- fact_aunt(X, _).
 
-fact_female(X) :- fact_grandmother(X, _).
-
-fact_male(X) :- fact_son(X, _).
-
-fact_male(X) :- fact_brother(X, _).
-
-fact_male(X) :- fact_father(X, _).
-
-fact_male(X) :- fact_uncle(X, _).
-
-fact_male(X) :- fact_grandfather(X, _).
-
-male(X) :- fact_male(X).
-
-male(X) :- fact_male(L), is_list(L), member(X, L).
-
-male(L) :- is_list(L), forall(member(X, L), male(X)).
-
-% We use father/2 and grandfather/2 because we must be able to take into account concluding that X is male because he is a parent of someone who already has a defined mother. 
-male(X) :- father(X, _). 
-
-male(X) :- grandfather(X, _). 
+female(X) :- fact_grandmother(X, _).
 
 female(X) :- fact_female(X).
 
@@ -293,10 +267,21 @@ female(X) :- fact_female(L), is_list(L), member(X, L).
 
 female(L) :- is_list(L), forall(member(X, L), female(X)).
 
-% Same applies for mother/2 and grandmother/2
-female(X) :- mother(X, _).
+male(X) :- fact_son(X, _).
 
-female(X) :- grandmother(X, _). 
+male(X) :- fact_brother(X, _).
+
+male(X) :- fact_father(X, _).
+
+male(X) :- fact_uncle(X, _).
+
+male(X) :- fact_grandfather(X, _).
+
+male(X) :- fact_male(X).
+
+male(X) :- fact_male(L), is_list(L), member(X, L).
+
+male(L) :- is_list(L), forall(member(X, L), male(X)).
 
 % Parent -----------------------------------------------------------------------
 
@@ -369,11 +354,6 @@ mother(X, Y) :-
     parent(X, Y),
     fact_female(L), is_list(L), member(X, L).
 
-mother(X, Y) :- 
-    parent(Z, Y),
-    fact_father(X, Y),
-    X \= Z.
-
 % Father -----------------------------------------------------------------------
 
 father(X, Y) :- fact_father(X, Y).
@@ -391,11 +371,6 @@ father(X, Y) :-
 father(X, Y) :-
     parent(X, Y),
     fact_male(L), is_list(L), member(X, L).
-
-father(X, Y) :- 
-    parent(Z, Y),
-    fact_mother(X, Y),
-    X \= Z.
 
 % Child ------------------------------------------------------------------------
 
@@ -524,37 +499,15 @@ brother(X, Y) :-
     sibling(X, Y),
     male(X).
 
-% Grandparent ------------------------------------------------------------------
-
-grandparent(X, Y) :-
-    fact_grandparent(X, Y).
-
-grandparent(X, Y) :- fact_grandfather(X, Y).
-
-grandparent(X, Y) :- fact_grandmother(X, Y).
-
-grandparent(X, Y) :-
-    parent(X, Z),
-    parent(Z, Y).
-
 % Grandfather ------------------------------------------------------------------
 
 grandfather(X, Y) :-
     fact_grandfather(X, Y).
 
 grandfather(X, Y) :-
-    grandparent(X, Y),
-    findall(Z, (grandparent(Z, Y), fact_female(Z)), L),
-    length(L, S),
-    S > 1.
-
-grandfather(X, Y) :-
-    grandparent(X, Y),
-    fact_male(X).
-
-grandfather(X, Y) :-
-    grandparent(X, Y),
-    fact_male(L), is_list(L), member(X, L).
+    parent(X, Z),
+    parent(Z, Y),
+    male(X).
 
 % Grandmother ------------------------------------------------------------------
 
@@ -562,18 +515,9 @@ grandmother(X, Y) :-
     fact_grandmother(X, Y).
 
 grandmother(X, Y) :-
-    grandparent(X, Y),
-    findall(Z, (grandparent(Z, Y), fact_male(Z)), L),
-    length(L, S),
-    S > 1.
-
-grandmother(X, Y) :-
-    grandparent(X, Y),
-    fact_female(X).
-
-grandmother(X, Y) :-
-    grandparent(X, Y),
-    fact_female(L), is_list(L), member(X, L).
+    parent(X, Z),
+    parent(Z, Y),
+    female(X).
 
 % Aunt -------------------------------------------------------------------------
 
@@ -599,7 +543,10 @@ ancestor(X, Y) :-
     parent(X, Y).
 
 ancestor(X, Y) :-
-    grandparent(X, Y).
+    grandfather(X, Y).
+
+ancestor(X, Y) :-
+    grandmother(X, Y).
 
 ancestor(X, Y) :-
     parent(P, Y),
